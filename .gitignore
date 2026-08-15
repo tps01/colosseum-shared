@@ -55,7 +55,10 @@ htmlcov/
 # Editors and IDEs
 .idea/
 .vscode/
-.cursor/
+.cursor/*
+!.cursor/rules/
+.cursor/rules/*
+!.cursor/rules/gitflow.mdc
 *.swp
 *.swo
 *~

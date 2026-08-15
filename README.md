@@ -5,11 +5,11 @@ First-party Colosseum plugin providing `col.shared.*` (SSH, regex, parsing).
 ## Install
 
 ```bash
-pip install colosseum-core
-pip install -e ".[ssh,test]"
+pip install colosseum-shared
 ```
 
-Requires `colosseum-core` 0.15.x. Registers the `shared` namespace via the `colosseum.plugins` entry point.
+This installs the complete plugin, including SSH support. It requires `colosseum-core`
+0.15.x and registers the `shared` namespace through the `colosseum.plugins` entry point.
 
 ## Usage
 
@@ -25,6 +25,8 @@ col.endex()
 
 ```bash
 pip install -e ../colosseum-core
-pip install -e ".[ssh,test,static]"
+pip install -e ".[test,static]"
 pytest
+ruff check .
+mypy
 ```

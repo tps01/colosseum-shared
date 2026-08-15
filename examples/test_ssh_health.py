@@ -7,20 +7,26 @@ Exercises:
   - col.endex() aggregates required/optional verifications and exits 0/1 (no manual result loop)
 
 Run:
-  set COLOSSEUM_BENCH_CONFIG=bench.sim.toml
   python examples/test_ssh_health.py
-  colosseum run examples/test_ssh_health.py --config examples/configs/bench.sim.toml
+  colosseum run examples/test_ssh_health.py --config examples/configs/bench.shared.sim.toml
 """
 
 from __future__ import annotations
+
 import os
 from pathlib import Path
+
 import colosseum as col
 
-_CONFIG = Path(__file__).resolve().parent / "configs" / os.environ.get("COLOSSEUM_BENCH_CONFIG", "bench.toml")
+_CONFIG = (
+    Path(__file__).resolve().parent
+    / "configs"
+    / os.environ.get("COLOSSEUM_BENCH_CONFIG", "bench.shared.sim.toml")
+)
 
 # Version pattern for embedded Linux image strings
 _VERSION_PATTERN = r"v\d+\.\d+\.\d+"
+
 
 def main() -> None:
     col.config.load_config(str(_CONFIG))
@@ -28,7 +34,11 @@ def main() -> None:
     col.shared.ssh.measure_stdout(ssh_id=1, command="cat /etc/version", key="uut_version")
     col.shared.regex.verify_match(key="uut_version", pattern=_VERSION_PATTERN)
 
-    col.shared.ssh.measure_stdout(ssh_id=1, command="test -f /etc/os-release && echo present", key="os_release_marker")
+    col.shared.ssh.measure_stdout(
+        ssh_id=1,
+        command="test -f /etc/os-release && echo present",
+        key="os_release_marker",
+    )
     col.shared.regex.verify_match(key="os_release_marker", pattern=r"present")
 
 
