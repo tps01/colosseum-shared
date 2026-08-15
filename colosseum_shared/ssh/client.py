@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, cast
+from typing import Any
+
+import paramiko
 
 from colosseum_shared.parsing.text import strip_response
 
@@ -11,7 +13,7 @@ _logger = logging.getLogger("colosseum.shared")
 class SSHClientWrapper:
     def __init__(self, config: dict[str, Any]) -> None:
         self._config = config
-        self._client: Any = None
+        self._client: paramiko.SSHClient | None = None
         driver = str(config.get("driver", "ssh")).lower()
         if driver == "sim":
             self._sim = True
@@ -21,13 +23,6 @@ class SSHClientWrapper:
             self._connect_paramiko()
 
     def _connect_paramiko(self) -> None:
-        try:
-            import paramiko
-        except ImportError as exc:  # pragma: no cover
-            raise RuntimeError(
-                "paramiko is required for SSH. Install with: pip install colosseum[ssh]"
-            ) from exc
-
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507  # bench DUT SSH
         connect_kwargs = {
@@ -45,7 +40,7 @@ class SSHClientWrapper:
             connect_kwargs["allow_agent"] = False
             connect_kwargs["look_for_keys"] = False
         client.connect(**connect_kwargs)
-        self._client = cast(Any, client)
+        self._client = client
         _logger.debug(
             "SSH connected to %s:%s as %s",
             connect_kwargs["hostname"],
@@ -58,8 +53,10 @@ class SSHClientWrapper:
         if self._sim:
             response = self._sim_stdout(command)
         else:
-            assert self._client is not None
-            _stdin, stdout, _stderr = self._client.exec_command(  # nosec B601  # test script command
+            client = self._client
+            if client is None:
+                raise RuntimeError("SSH client is not connected")
+            _stdin, stdout, _stderr = client.exec_command(  # nosec B601  # test script command
                 command, timeout=timeout
             )
             response = strip_response(stdout.read().decode("utf-8", errors="replace"))
