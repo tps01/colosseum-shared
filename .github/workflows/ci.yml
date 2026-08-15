@@ -16,15 +16,15 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: colosseum-shared
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: tps01/colosseum-core
           ref: develop
           path: colosseum-core
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
