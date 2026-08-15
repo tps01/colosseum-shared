@@ -1,0 +1,6 @@
+﻿# Shared plugin sim config fragment
+[[shared.ssh]]
+ssh_id = 1
+host = "127.0.0.1"
+username = "sim"
+driver = "sim"
