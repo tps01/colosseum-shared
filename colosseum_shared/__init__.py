@@ -2,7 +2,7 @@
 
 __colosseum_domain__ = "shared"
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 from colosseum.config.sections import ConfigSectionSpec
 from colosseum.plugins.registry import PluginRegistry
@@ -20,6 +20,6 @@ def register(registry: PluginRegistry) -> None:
             "shared.ssh",
             "ssh_id",
             required_keys=("host", "username"),
-            optional_keys=("port", "password", "key_filename", "timeout", "driver"),
+            optional_keys=("port", "password", "key_filename", "timeout", "driver", "auth"),
         )
     )
