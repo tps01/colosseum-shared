@@ -66,7 +66,8 @@ class SSHClientWrapper:
         transport.auth_none(username)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507  # bench DUT SSH
-        client._transport = transport
+        # Paramiko has no public setter; attach the authenticated transport.
+        setattr(client, "_transport", transport)
         self._client = client
         _logger.debug("SSH connected to %s:%s as %s (auth=none)", hostname, port, username)
 
