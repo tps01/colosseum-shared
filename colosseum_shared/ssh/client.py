@@ -23,6 +23,11 @@ class SSHClientWrapper:
             self._connect_paramiko()
 
     def _connect_paramiko(self) -> None:
+        auth = str(self._config.get("auth", "auto")).strip().lower()
+        if auth in ("none", "auth_none"):
+            self._connect_auth_none()
+            return
+
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507  # bench DUT SSH
         connect_kwargs = {
@@ -47,6 +52,23 @@ class SSHClientWrapper:
             connect_kwargs["port"],
             connect_kwargs["username"],
         )
+
+    def _connect_auth_none(self) -> None:
+        """Connect with Paramiko ``auth_none`` (passwordless DUT accounts)."""
+        hostname = str(self._config["host"])
+        port = int(self._config.get("port", 22))
+        username = str(self._config["username"])
+        timeout = float(self._config.get("timeout", 30.0))
+        transport = paramiko.Transport((hostname, port))
+        transport.banner_timeout = timeout
+        transport.auth_timeout = timeout
+        transport.start_client(timeout=timeout)
+        transport.auth_none(username)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # nosec B507  # bench DUT SSH
+        client._transport = transport
+        self._client = client
+        _logger.debug("SSH connected to %s:%s as %s (auth=none)", hostname, port, username)
 
     def exec_stdout(self, command: str, timeout: float = 30.0) -> str:
         _logger.debug("SSH exec: %s (timeout=%ss)", command, timeout)
