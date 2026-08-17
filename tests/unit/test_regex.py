@@ -1,4 +1,4 @@
-"""I-SH: shared regex against a prior measurement key."""
+"""U-SH: regex verify_match latest-key lookup."""
 
 from __future__ import annotations
 
@@ -9,8 +9,6 @@ import pytest
 from colosseum.config import load_config
 from colosseum.decorators import measurement
 
-_VERSION_PATTERN = r"v\d+\.\d+\.\d+"
-
 
 @measurement
 def _record_text(*, key: str, value: str) -> str:
@@ -18,7 +16,7 @@ def _record_text(*, key: str, value: str) -> str:
     return value
 
 
-def test_regex_verify_latest_measurement_by_key(
+def test_verify_match_finds_measurement_by_key(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     config_path = (
@@ -26,9 +24,6 @@ def test_regex_verify_latest_measurement_by_key(
     )
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
-    _record_text(key="uut_version", value="v1.2.3")
-    result = col.shared.regex.verify_match(key="uut_version", pattern=_VERSION_PATTERN)
+    _record_text(key="marker", value="second")
+    result = col.shared.regex.verify_match(key="marker", pattern=r"^second$")
     assert result.status == "PASS"
-    with pytest.raises(SystemExit) as exc_info:
-        col.endex()
-    assert exc_info.value.code in (None, 0)

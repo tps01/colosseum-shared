@@ -3,7 +3,6 @@
 from importlib.metadata import distribution
 
 import colosseum_shared
-import paramiko
 
 
 def test_complete_runtime_dependencies_are_installed_by_default() -> None:
@@ -11,9 +10,9 @@ def test_complete_runtime_dependencies_are_installed_by_default() -> None:
     requirements = [requirement.lower() for requirement in metadata.requires or []]
 
     assert any(requirement.startswith("colosseum-core") for requirement in requirements)
-    assert any(requirement.startswith("paramiko") for requirement in requirements)
-    assert "ssh" not in (metadata.metadata.get_all("Provides-Extra") or [])
-    assert paramiko.SSHClient is not None
+    assert not any(requirement.startswith("paramiko") for requirement in requirements)
+    extras = set(metadata.metadata.get_all("Provides-Extra") or [])
+    assert extras.issubset({"test", "static"})
 
 
 def test_plugin_entry_points_and_version_match_metadata() -> None:

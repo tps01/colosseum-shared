@@ -12,7 +12,7 @@ from colosseum.decorators import (
 )
 
 
-@verification(sources=[MeasurementSource(domain="shared", command="ssh.measure_stdout")])
+@verification()
 def verify_match(
     *,
     key: str,
@@ -28,19 +28,27 @@ def verify_match(
     :type pattern: str
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
-    :param sources: Override default ``ssh.measure_stdout`` source list.
+    :param sources: Optional measurement sources. When omitted, uses the latest
+        measurement row with the same ``key``.
     :type sources: Sequence[MeasurementSource] | None, optional
 
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
-    source_list = list(sources or [MeasurementSource("shared", "ssh.measure_stdout")])
     actual = None
-    for source in source_list:
-        row = require_context().db.get_measurement(source.domain, source.command, key, row_index=0)
-        if row is not None and row.value is not None:
-            actual = str(row.value)
-            break
+    ctx = require_context()
+    if sources:
+        for source in sources:
+            source_row = ctx.db.get_measurement(
+                source.domain, source.command, key, row_index=0
+            )
+            if source_row is not None and source_row.value is not None:
+                actual = str(source_row.value)
+                break
+    else:
+        for recorded in ctx.db.fetch_all_measurements():
+            if recorded.key == key and recorded.value is not None:
+                actual = str(recorded.value)
     if actual is None:
         return missing_measurement_result(key=key, optional=optional)
     if re.search(pattern, actual):
