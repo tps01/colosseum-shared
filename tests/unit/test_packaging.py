@@ -23,5 +23,4 @@ def test_plugin_entry_points_and_version_match_metadata() -> None:
     }
 
     assert entry_points[("colosseum.plugins", "shared")] == "colosseum_shared:register"
-    assert entry_points[("colosseum.docgen", "shared")] == "colosseum_shared.docgen_entry:spec"
     assert colosseum_shared.__version__ == metadata.version

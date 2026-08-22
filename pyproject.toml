@@ -25,9 +25,6 @@ static = [
 [project.entry-points."colosseum.plugins"]
 shared = "colosseum_shared:register"
 
-[project.entry-points."colosseum.docgen"]
-shared = "colosseum_shared.docgen_entry:spec"
-
 [tool.setuptools.packages.find]
 include = ["colosseum_shared*"]
 
