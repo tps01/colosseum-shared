@@ -1,11 +1,16 @@
 """Colosseum shared utilities plugin (regex, parsing)."""
 
-__colosseum_domain__ = "shared"
-
-__version__ = "0.2.1"
+from importlib import metadata
 
 from colosseum.logging import get_logger
 from colosseum.plugins.registry import PluginRegistry
+
+__colosseum_domain__ = "shared"
+
+try:
+    __version__ = metadata.version("colosseum-shared")
+except metadata.PackageNotFoundError:  # pragma: no cover
+    __version__ = "0.0.0"
 
 _logger = get_logger("colosseum.shared")
 
