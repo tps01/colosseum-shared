@@ -10,6 +10,9 @@ from colosseum.decorators import (
     missing_measurement_result,
     verification,
 )
+from colosseum.logging import get_logger
+
+_logger = get_logger("colosseum.shared")
 
 
 @verification()
@@ -50,8 +53,11 @@ def verify_match(
             if recorded.key == key and recorded.value is not None:
                 actual = str(recorded.value)
     if actual is None:
+        _logger.debug("verify_match key=%s missing measurement", key)
         return missing_measurement_result(key=key, optional=optional)
-    if re.search(pattern, actual):
+    matched = re.search(pattern, actual) is not None
+    _logger.debug("verify_match key=%s pattern=%r matched=%s", key, pattern, matched)
+    if matched:
         return VerificationResult(status="PASS", message="", optional=optional, actual=actual)
     return VerificationResult(
         status="FAIL",

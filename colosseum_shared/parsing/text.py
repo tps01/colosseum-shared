@@ -2,6 +2,10 @@ from __future__ import annotations
 
 import re
 
+from colosseum.logging import get_logger
+
+_logger = get_logger("colosseum.shared")
+
 
 def strip_response(text: str) -> str:
     """Strip leading and trailing whitespace from instrument response text.
@@ -29,7 +33,9 @@ def parse_float(text: str) -> float:
     match = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", text)
     if not match:
         raise ValueError(f"No numeric value in response: {text!r}")
-    return float(match.group(0))
+    value = float(match.group(0))
+    _logger.debug("parse_float %r -> %s", text[:80], value)
+    return value
 
 
 def parse_float_list(text: str, sep: str = ",") -> list[float]:
