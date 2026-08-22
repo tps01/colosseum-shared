@@ -2,7 +2,7 @@
 
 __colosseum_domain__ = "shared"
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 from colosseum.logging import get_logger
 from colosseum.plugins.registry import PluginRegistry
