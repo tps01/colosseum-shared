@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 
-from colosseum.context import require_context
+from colosseum.context import get_context
 from colosseum.decorators import (
     VerificationResult,
     missing_measurement_result,
@@ -33,7 +33,7 @@ def verify_match(
     :rtype: VerificationResult
     """
     actual = None
-    ctx = require_context()
+    ctx = get_context()
     for recorded in ctx.db.fetch_all_measurements():
         if recorded.key == key and recorded.value is not None:
             actual = str(recorded.value)
