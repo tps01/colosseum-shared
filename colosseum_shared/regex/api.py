@@ -1,24 +1,24 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Sequence
 
-from colosseum.context import require_context
+from colosseum.context import get_context
 from colosseum.decorators import (
-    MeasurementSource,
     VerificationResult,
     missing_measurement_result,
     verification,
 )
+from colosseum.logging import get_logger
+
+_logger = get_logger("colosseum.shared")
 
 
-@verification(sources=[MeasurementSource(domain="shared", command="ssh.measure_stdout")])
+@verification
 def verify_match(
     *,
     key: str,
     pattern: str,
     optional: bool = False,
-    sources: Sequence[MeasurementSource] | None = None,
 ) -> VerificationResult:
     """Verify a regex matches text from a prior measurement.
 
@@ -28,22 +28,22 @@ def verify_match(
     :type pattern: str
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
-    :param sources: Override default ``ssh.measure_stdout`` source list.
-    :type sources: Sequence[MeasurementSource] | None, optional
 
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
-    source_list = list(sources or [MeasurementSource("shared", "ssh.measure_stdout")])
     actual = None
-    for source in source_list:
-        row = require_context().db.get_measurement(source.domain, source.command, key, row_index=0)
-        if row is not None and row.value is not None:
-            actual = str(row.value)
+    ctx = get_context()
+    for recorded in ctx.db.fetch_all_measurements():
+        if recorded.key == key and recorded.value is not None:
+            actual = str(recorded.value)
             break
     if actual is None:
+        _logger.debug("verify_match key=%s missing measurement", key)
         return missing_measurement_result(key=key, optional=optional)
-    if re.search(pattern, actual):
+    matched = re.search(pattern, actual) is not None
+    _logger.debug("verify_match key=%s pattern=%r matched=%s", key, pattern, matched)
+    if matched:
         return VerificationResult(status="PASS", message="", optional=optional, actual=actual)
     return VerificationResult(
         status="FAIL",

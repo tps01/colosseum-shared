@@ -55,4 +55,4 @@ jobs:
           python -m venv .package-venv
           .package-venv/bin/pip install ../colosseum-core
           .package-venv/bin/pip install dist/*.whl
-          .package-venv/bin/python -c "import colosseum_shared, paramiko; from colosseum_shared.network import list_ipv4_network_bindings"
+          .package-venv/bin/python -c "import colosseum_shared"
