@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import re
 
-from colosseum.context import get_context
 from colosseum.decorators import (
     VerificationResult,
     missing_measurement_result,
     verification,
 )
 from colosseum.logging import get_logger
+
+from colosseum_shared.verify.api import _latest_measurement_by_key
 
 _logger = get_logger("colosseum.shared")
 
@@ -32,15 +33,11 @@ def verify_match(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
-    actual = None
-    ctx = get_context()
-    for recorded in ctx.db.fetch_all_measurements():
-        if recorded.key == key and recorded.value is not None:
-            actual = str(recorded.value)
-            break
-    if actual is None:
+    row = _latest_measurement_by_key(key)
+    if row is None or row.value is None:
         _logger.debug("verify_match key=%s missing measurement", key)
         return missing_measurement_result(key=key, optional=optional)
+    actual = str(row.value)
     matched = re.search(pattern, actual) is not None
     _logger.debug("verify_match key=%s pattern=%r matched=%s", key, pattern, matched)
     if matched:
