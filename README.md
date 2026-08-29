@@ -2,7 +2,8 @@
 
 First-party Colosseum plugin providing `col.shared.*` general utilities
 (generic verifications, regex verification, text parsing, and operator prompts).
-Protocol clients such as SSH live in `colosseum-messaging` (`col.messaging.ssh`).
+Protocol clients such as SSH live in `colosseum-messaging`
+(`col.messaging.ssh`).
 
 ## Install
 
@@ -10,7 +11,8 @@ Protocol clients such as SSH live in `colosseum-messaging` (`col.messaging.ssh`)
 pip install colosseum-shared
 ```
 
-This requires `colosseum-core` 0.15.x and registers the `shared` namespace through the
+This requires `colosseum-core` 0.15.x and registers the `shared` namespace
+through the
 `colosseum.plugins` entry point.
 
 ## Usage
@@ -42,7 +44,8 @@ col.shared.prompt.prompt_exit(message="Type PASS to continue: ", key="ack", expe
 col.endex()
 ```
 
-SSH remote exec is `col.messaging.ssh.measure_stdout` from `colosseum-messaging`.
+SSH remote exec is `col.messaging.ssh.measure_stdout` from
+`colosseum-messaging`.
 
 ## Develop
 

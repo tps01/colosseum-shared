@@ -8,7 +8,7 @@ import colosseum as col
 import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
-from colosseum.output.paths import ensure_runtime_ready
+from colosseum.runner.paths import ensure_runtime_ready
 from colosseum_shared.prompt import api as prompt_api
 
 _PROMPT_MEASUREMENT_COMMAND = "prompt.prompt_measurement"
@@ -43,7 +43,7 @@ def test_prompt_measurement_records_input(
     value = prompt_api.prompt_measurement(message="Serial: ", key="serial")
     assert value == "SN-12345"
     row = get_context().db.get_measurement(
-        "shared", _PROMPT_MEASUREMENT_COMMAND, "serial", row_index=0
+        "shared", _PROMPT_MEASUREMENT_COMMAND, "serial", row_index=0,
     )
     assert row is not None
     assert row.value == "SN-12345"
@@ -72,7 +72,7 @@ def test_prompt_exit_match_continues(
     monkeypatch.setattr(prompt_api, "read_line", lambda *, message: "PASS")
     prompt_api.prompt_exit(message="Type PASS: ", key="ack", expected="PASS")
     row = get_context().db.get_measurement(
-        "shared", _PROMPT_MEASUREMENT_COMMAND, "ack", row_index=0
+        "shared", _PROMPT_MEASUREMENT_COMMAND, "ack", row_index=0,
     )
     assert row is not None
     assert row.value == "PASS"
