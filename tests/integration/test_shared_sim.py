@@ -19,7 +19,7 @@ def _record_text(*, key: str, value: str) -> str:
 
 
 def test_regex_verify_latest_measurement_by_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = (
         Path(__file__).resolve().parents[2] / "examples" / "configs" / "bench.shared.sim.toml"
