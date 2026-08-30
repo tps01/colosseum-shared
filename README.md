@@ -11,7 +11,7 @@ Protocol clients such as SSH live in `colosseum-messaging`
 pip install colosseum-shared
 ```
 
-This requires `colosseum-core` 0.15.x and registers the `shared` namespace
+This requires `colosseum-core` 0.16.1+ and registers the `shared` namespace
 through the
 `colosseum.plugins` entry point.
 
@@ -20,7 +20,7 @@ through the
 ```python
 import colosseum as col
 
-col.config.load_config("examples/configs/bench.shared.sim.toml")
+col.config.load_config("examples/configs/config.shared.sim.toml")
 # After any measurement stored under key="uut_version":
 col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
 # Generic field check (any domain, latest row for key):
@@ -46,6 +46,13 @@ col.endex()
 
 SSH remote exec is `col.messaging.ssh.measure_stdout` from
 `colosseum-messaging`.
+
+## Expected artifacts
+
+Normal CLI runs write `summary.json`, `summary.txt`, `execution.sqlite`, and
+`debug.log` under the run output directory. When metadata is loaded (see
+`examples/configs/metadata.yaml`), core also emits a WATS-format
+`wats_<datetime>_<script>.json` report alongside those files.
 
 ## Develop
 
