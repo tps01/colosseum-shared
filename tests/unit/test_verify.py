@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colosseum as col
-import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
-from colosseum.database.records import MeasurementRow
+from colosseum.database import MeasurementRow
 from colosseum.decorators import VerificationResult, measurement, verification
-from colosseum.output.paths import ensure_runtime_ready
+from colosseum.runner.paths import ensure_runtime_ready
+
+if TYPE_CHECKING:
+    import pytest
 
 
 @measurement
@@ -45,7 +48,7 @@ def _pass_verify(*, key: str, optional: bool = False) -> VerificationResult:
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "bench.shared.sim.toml"
+        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     )
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
@@ -65,7 +68,7 @@ def _insert_measurement(
             key=key,
             value=value,
             timestamp=timestamp,
-        )
+        ),
     )
 
 
@@ -147,7 +150,7 @@ def test_verify_file_exists_with_path(tmp_path: Path, monkeypatch: pytest.Monkey
 
 
 def test_verify_file_exists_from_measurement_value(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -226,7 +229,7 @@ def test_verify_m_of_n_fail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_verify_match_uses_latest_measurement_by_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _insert_measurement(key="marker", timestamp="2026-01-01T00:00:00+00:00", value="first")
@@ -237,7 +240,7 @@ def test_verify_match_uses_latest_measurement_by_key(
             key="marker",
             value="second",
             timestamp="2026-01-01T00:00:01+00:00",
-        )
+        ),
     )
     result = col.shared.regex.verify_match(key="marker", pattern=r"^second$")
     assert result.status == "PASS"

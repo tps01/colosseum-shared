@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-from typing import NoReturn
-
 from colosseum.context import get_context
 from colosseum.database import CommandRow
 from colosseum.decorators import CommandResult, command, measurement
 from colosseum.logging import get_logger
-from colosseum.output import ensure_runtime_ready
 from colosseum.results import endex
+from colosseum.runner.paths import ensure_runtime_ready
 
 from colosseum_shared.prompt._stdin import read_line, wait_any_key
 
 _logger = get_logger("colosseum.shared")
 
 
-def _fail_and_exit(*, message: str, key: str, command: str) -> NoReturn:
+def _fail_and_exit(*, message: str, key: str, command: str) -> None:
     ctx = get_context()
     ensure_runtime_ready(ctx)
     result = CommandResult(status="FAIL", message=message)
@@ -29,7 +27,7 @@ def _fail_and_exit(*, message: str, key: str, command: str) -> NoReturn:
             status="FAIL",
             optional=False,
             message=message,
-        )
+        ),
     )
     ctx.result_aggregator.record_command(
         result,

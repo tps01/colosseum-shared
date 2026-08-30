@@ -2,7 +2,8 @@
 
 First-party Colosseum plugin providing `col.shared.*` general utilities
 (generic verifications, regex verification, text parsing, and operator prompts).
-Protocol clients such as SSH live in `colosseum-messaging` (`col.messaging.ssh`).
+Protocol clients such as SSH live in `colosseum-messaging`
+(`col.messaging.ssh`).
 
 ## Install
 
@@ -10,7 +11,8 @@ Protocol clients such as SSH live in `colosseum-messaging` (`col.messaging.ssh`)
 pip install colosseum-shared
 ```
 
-This requires `colosseum-core` 0.15.x and registers the `shared` namespace through the
+This requires `colosseum-core` 0.16.1+ and registers the `shared` namespace
+through the
 `colosseum.plugins` entry point.
 
 ## Usage
@@ -18,7 +20,7 @@ This requires `colosseum-core` 0.15.x and registers the `shared` namespace throu
 ```python
 import colosseum as col
 
-col.config.load_config("examples/configs/bench.shared.sim.toml")
+col.config.load_config("examples/configs/config.shared.sim.toml")
 # After any measurement stored under key="uut_version":
 col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
 # Generic field check (any domain, latest row for key):
@@ -42,7 +44,15 @@ col.shared.prompt.prompt_exit(message="Type PASS to continue: ", key="ack", expe
 col.endex()
 ```
 
-SSH remote exec is `col.messaging.ssh.measure_stdout` from `colosseum-messaging`.
+SSH remote exec is `col.messaging.ssh.measure_stdout` from
+`colosseum-messaging`.
+
+## Expected artifacts
+
+Normal CLI runs write `summary.json`, `summary.txt`, `execution.sqlite`, and
+`debug.log` under the run output directory. When metadata is loaded (see
+`examples/configs/metadata.yaml`), core also emits a WATS-format
+`wats_<datetime>_<script>.json` report alongside those files.
 
 ## Develop
 

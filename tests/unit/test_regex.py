@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colosseum as col
-import pytest
 from colosseum.config import load_config
 from colosseum.decorators import measurement
+
+if TYPE_CHECKING:
+    import pytest
 
 
 @measurement
@@ -17,10 +20,10 @@ def _record_text(*, key: str, value: str) -> str:
 
 
 def test_verify_match_finds_measurement_by_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "bench.shared.sim.toml"
+        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     )
     monkeypatch.chdir(tmp_path)
     load_config(config_path)

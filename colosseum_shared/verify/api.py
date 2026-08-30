@@ -3,15 +3,18 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from colosseum.context import get_context
-from colosseum.database.records import MeasurementRecord, VerificationRecord
 from colosseum.decorators import (
     VerificationResult,
     missing_measurement_result,
     verification,
 )
 from colosseum.logging import get_logger
+
+if TYPE_CHECKING:
+    from colosseum.database import MeasurementRecord, VerificationRecord
 
 _logger = get_logger("colosseum.shared")
 
@@ -49,7 +52,7 @@ def _parse_timestamp(timestamp: str) -> datetime | None:
 
 
 def _extract_field(
-    value: object, field: str | None
+    value: object, field: str | None,
 ) -> tuple[object | None, VerificationResult | None]:
     if field is None:
         return value, None
