@@ -48,7 +48,7 @@ def _pass_verify(*, key: str, optional: bool = False) -> VerificationResult:
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "bench.shared.sim.toml"
+        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     )
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
