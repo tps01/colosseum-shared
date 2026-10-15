@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from collections.abc import Mapping
 from datetime import datetime
@@ -227,6 +228,112 @@ def verify_file_exists(
         message=f"file not found: {resolved}",
         optional=optional,
         actual=str(resolved),
+    )
+
+
+@verification
+def verify_file_contents(
+    *,
+    key: str,
+    pattern: str,
+    path: str | None = None,
+    count: int = 1,
+    invert: bool = False,
+    optional: bool = False,
+) -> VerificationResult:
+    """PASS when a regex appears in a file at least ``count`` times.
+
+    With ``invert=True``, PASS when the pattern appears fewer than ``count`` times
+    (so ``count=1`` means the pattern must be absent).
+
+    :param key: Verification evidence key (and measurement key when ``path`` is omitted).
+    :param pattern: Regular expression searched in the file text.
+    :param path: Absolute path, or relative to the run output directory. When
+        omitted, the latest measurement for ``key`` is used as the path.
+    :param count: Required match count threshold (must be >= 1).
+    :param invert: Invert the threshold comparison.
+    :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
+    """
+    if count < 1:
+        return VerificationResult(
+            status="ERROR",
+            message=f"count must be >= 1, got {count}",
+            optional=optional,
+        )
+    file_path = path
+    if file_path is None:
+        row = _latest_measurement_by_key(key)
+        if row is None or row.value is None:
+            _logger.debug("verify_file_contents key=%s missing measurement for path", key)
+            return missing_measurement_result(key=key, optional=optional)
+        file_path = str(row.value)
+    if not file_path:
+        return VerificationResult(
+            status="ERROR",
+            message="no path provided and measurement value is empty",
+            optional=optional,
+        )
+    resolved = _resolve_path(file_path)
+    if not resolved.is_file():
+        return VerificationResult(
+            status="FAIL",
+            message=f"file not found: {resolved}",
+            optional=optional,
+            actual=str(resolved),
+        )
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError as exc:
+        return VerificationResult(
+            status="ERROR",
+            message=f"could not read {resolved}: {exc}",
+            optional=optional,
+            actual=str(resolved),
+        )
+    try:
+        compiled = re.compile(pattern)
+    except re.error as exc:
+        return VerificationResult(
+            status="ERROR",
+            message=f"invalid pattern {pattern!r}: {exc}",
+            optional=optional,
+        )
+    hits = sum(1 for _ in compiled.finditer(text))
+    _logger.debug(
+        "verify_file_contents key=%s path=%s pattern=%r count=%s invert=%s hits=%s",
+        key,
+        resolved,
+        pattern,
+        count,
+        invert,
+        hits,
+    )
+    if invert:
+        if hits < count:
+            return VerificationResult(
+                status="PASS",
+                message=f"{hits} match(es) < {count}",
+                optional=optional,
+                actual=hits,
+            )
+        return VerificationResult(
+            status="FAIL",
+            message=f"expected fewer than {count} match(es) of {pattern!r}, found {hits}",
+            optional=optional,
+            actual=hits,
+        )
+    if hits >= count:
+        return VerificationResult(
+            status="PASS",
+            message=f"{hits} match(es) >= {count}",
+            optional=optional,
+            actual=hits,
+        )
+    return VerificationResult(
+        status="FAIL",
+        message=f"expected at least {count} match(es) of {pattern!r}, found {hits}",
+        optional=optional,
+        actual=hits,
     )
 
 
