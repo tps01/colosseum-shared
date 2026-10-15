@@ -1,4 +1,4 @@
-"""Colosseum shared utilities plugin (verify, regex, parsing)."""
+"""Colosseum shared utilities plugin (verify, regex, parsing, wait, prompts)."""
 
 from importlib import metadata
 

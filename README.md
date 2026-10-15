@@ -21,12 +21,28 @@ through the
 import colosseum as col
 
 col.config.load_config("examples/configs/config.shared.sim.toml")
+# Timed wait (bare number = seconds; also 500ms, 1h30m, …); optional CLI bar:
+col.shared.wait(duration=2)
+col.shared.wait(duration="500ms", progress_bar=True)
 # After any measurement stored under key="uut_version":
 col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
 # Generic field check (any domain, latest row for key):
 col.shared.verify.verify_field(key="uut_version", expected_val="v1.2.3")
 col.shared.verify.verify_measurement_exists(key="uut_version")
 col.shared.verify.verify_file_exists(key="profile", path="profile.json")
+col.shared.verify.verify_file_contents(
+    key="log_has_error",
+    path="uut.log",
+    pattern=r"ERROR",
+    count=1,
+)
+# Pass when the pattern is absent (or appears fewer than count times):
+col.shared.verify.verify_file_contents(
+    key="log_no_fatal",
+    path="uut.log",
+    pattern=r"FATAL",
+    invert=True,
+)
 # Wait for a side-effect file (e.g. product wrote a capture under a folder):
 before = col.shared.verify.snapshot_files("captures", pattern="*_screenshot.*")
 # ... trigger the product ...

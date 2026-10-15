@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "colosseum-shared"
-version = "0.3.5"
-description = "Colosseum shared utilities plugin (verify, regex, parsing, operator prompts)"
+version = "0.3.6"
+description = "Colosseum shared utilities plugin (verify, wait, regex, parsing, operator prompts)"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
