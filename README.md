@@ -27,6 +27,23 @@ col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
 col.shared.verify.verify_field(key="uut_version", expected_val="v1.2.3")
 col.shared.verify.verify_measurement_exists(key="uut_version")
 col.shared.verify.verify_file_exists(key="profile", path="profile.json")
+# Wait for a side-effect file (e.g. product wrote a capture under a folder):
+before = col.shared.verify.snapshot_files("captures", pattern="*_screenshot.*")
+# ... trigger the product ...
+col.shared.verify.verify_new_file(
+    key="shot",
+    directory="captures",
+    before=before,
+    pattern="*_screenshot.*",
+    timeout_s=15.0,
+)
+col.shared.verify.verify_no_new_file(
+    key="quiet",
+    directory="captures",
+    before=before,
+    pattern="*_screenshot.*",
+    settle_s=2.0,
+)
 col.shared.verify.verify_time_delta(
     key="ready",
     other_key="power_on",

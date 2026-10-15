@@ -168,6 +168,36 @@ def test_verify_file_exists_missing_file(tmp_path: Path, monkeypatch: pytest.Mon
     assert result.status == "FAIL"
 
 
+def test_verify_new_file_and_no_new_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    captures = ctx.output_dir / "captures"
+    captures.mkdir(parents=True, exist_ok=True)
+    (captures / "old_screenshot.jpg").write_bytes(b"x")
+    before = col.shared.verify.snapshot_files("captures", pattern="*_screenshot.*")
+    assert "old_screenshot.jpg" in before
+
+    quiet = col.shared.verify.verify_no_new_file(
+        key="quiet",
+        directory="captures",
+        before=before,
+        pattern="*_screenshot.*",
+        settle_s=0.3,
+    )
+    assert quiet.status == "PASS"
+
+    (captures / "new_screenshot.jpg").write_bytes(b"y")
+    appeared = col.shared.verify.verify_new_file(
+        key="shot",
+        directory="captures",
+        before=before,
+        pattern="*_screenshot.*",
+        timeout_s=1.0,
+    )
+    assert appeared.status == "PASS"
+
+
 def test_verify_time_delta_pass(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _insert_measurement(key="power_on", timestamp="2026-01-01T00:00:00+00:00")
