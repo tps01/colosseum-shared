@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
@@ -226,6 +227,123 @@ def verify_file_exists(
         message=f"file not found: {resolved}",
         optional=optional,
         actual=str(resolved),
+    )
+
+
+def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
+    """Return basenames currently matching ``pattern`` under ``directory``.
+
+    :param directory: Absolute directory, or relative to the run output directory.
+    :param pattern: Glob relative to ``directory`` (for example ``*_screenshot.*``).
+    """
+    root = _resolve_path(directory)
+    if not root.is_dir():
+        return set()
+    return {path.name for path in root.glob(pattern) if path.is_file()}
+
+
+def wait_for_new_file(
+    directory: str,
+    *,
+    before: set[str] | None = None,
+    pattern: str = "*",
+    timeout_s: float = 10.0,
+    poll_s: float = 0.25,
+) -> Path | None:
+    """Poll until a new file matching ``pattern`` appears; return its path or ``None``.
+
+    ``before`` is typically ``snapshot_files(...)`` taken before the action under test.
+    When omitted, an empty set is used (any matching file counts as new).
+    """
+    root = _resolve_path(directory)
+    seen = set() if before is None else set(before)
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if root.is_dir():
+            for path in root.glob(pattern):
+                if path.is_file() and path.name not in seen:
+                    return path
+        time.sleep(poll_s)
+    return None
+
+
+@verification
+def verify_new_file(
+    *,
+    key: str,
+    directory: str,
+    before: set[str] | None = None,
+    pattern: str = "*",
+    timeout_s: float = 10.0,
+    optional: bool = False,
+) -> VerificationResult:
+    """PASS when a new file matching ``pattern`` appears under ``directory``.
+
+    :param key: Verification evidence key.
+    :param directory: Absolute directory, or relative to the run output directory.
+    :param before: Basenames from ``snapshot_files`` before the triggering action.
+    :param pattern: Glob relative to ``directory``.
+    :param timeout_s: How long to wait for a new match.
+    :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
+    """
+    _ = key
+    found = wait_for_new_file(
+        directory,
+        before=before,
+        pattern=pattern,
+        timeout_s=timeout_s,
+    )
+    if found is not None:
+        return VerificationResult(
+            status="PASS",
+            message=f"new file {found.name}",
+            optional=optional,
+            actual=str(found),
+        )
+    return VerificationResult(
+        status="FAIL",
+        message=f"no new file matching {pattern!r} within {timeout_s:.0f}s",
+        optional=optional,
+    )
+
+
+@verification
+def verify_no_new_file(
+    *,
+    key: str,
+    directory: str,
+    before: set[str] | None = None,
+    pattern: str = "*",
+    settle_s: float = 2.0,
+    optional: bool = False,
+) -> VerificationResult:
+    """PASS when no new file matching ``pattern`` appears during ``settle_s``.
+
+    :param key: Verification evidence key.
+    :param directory: Absolute directory, or relative to the run output directory.
+    :param before: Basenames from ``snapshot_files`` before the quiet period.
+    :param pattern: Glob relative to ``directory``.
+    :param settle_s: How long the directory must stay quiet.
+    :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
+    """
+    _ = key
+    found = wait_for_new_file(
+        directory,
+        before=before,
+        pattern=pattern,
+        timeout_s=settle_s,
+    )
+    if found is None:
+        return VerificationResult(
+            status="PASS",
+            message=f"quiet for {settle_s:.1f}s",
+            optional=optional,
+        )
+    return VerificationResult(
+        status="FAIL",
+        message=f"unexpected new file {found.name}",
+        optional=optional,
+        actual=str(found),
     )
 
 
