@@ -2,7 +2,7 @@
 
 ## Documentation
 
-HTML docs (GitHub Pages): https://tps01.github.io/colosseum-shared/
+API reference (GitHub Pages): https://tps01.github.io/colosseum-shared/
 
 Framework hub: https://tps01.github.io/colosseum-core/
 
