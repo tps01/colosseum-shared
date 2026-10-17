@@ -11,6 +11,18 @@ Baseline expectations for AI agents in this plugin repository.
 - User import remains `import colosseum as col`; this package registers
   namespaces via `colosseum.plugins`.
 
+## Layout helpers
+
+- `colosseum_shared/_evidence.py`: shared measurement lookup / path / compare
+  helpers for verify and regex. Do not re-import private `_latest_*` from verify.
+- `colosseum_shared/verify/{field,files,time,meta}.py`: split verify surface;
+  re-exported from `verify/api.py`. Keep command IDs as `verify.*` via
+  `__colosseum_command__`.
+- `colosseum_shared/measure.py`: one-off `measure_value` / `measure_env` /
+  `measure_mark` (parallel to `wait.py`).
+- Do not add `col.shared.signal` here without an explicit product request (RF
+  library TDD is a separate roadmap).
+
 ## Change discipline
 
 Prefer focused, compact changes. Do not commit unless asked. Read `RULES.md` at

@@ -26,12 +26,12 @@ def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
 def test_comment_logs_info(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    caplog: pytest.LogCaptureFixture,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
-    with caplog.at_level("INFO", logger="colosseum.shared"):
-        prompt_api.comment(message="Attach probe to J5")
-    assert "Attach probe to J5" in caplog.text
+    prompt_api.comment(message="Attach probe to J5")
+    # Core routes plugin loggers to the run stdout handler (not pytest caplog).
+    assert "Attach probe to J5" in capsys.readouterr().out
 
 
 def test_prompt_measurement_records_input(
