@@ -11,8 +11,7 @@ def test_complete_runtime_dependencies_are_installed_by_default() -> None:
 
     assert any(requirement.startswith("colosseum-core") for requirement in requirements)
     assert not any(requirement.startswith("paramiko") for requirement in requirements)
-    extras = set(metadata.metadata.get_all("Provides-Extra") or [])
-    assert extras.issubset({"test", "static"})
+    assert not metadata.metadata.get_all("Provides-Extra")
 
 
 def test_plugin_entry_points_and_version_match_metadata() -> None:

@@ -9,7 +9,7 @@ from colosseum.decorators import (
 )
 from colosseum.logging import get_logger
 
-from colosseum_shared.verify.api import _latest_measurement_by_key
+from colosseum_shared._evidence import latest_measurement_by_key
 
 _logger = get_logger("colosseum.shared")
 
@@ -33,7 +33,7 @@ def verify_match(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
-    row = _latest_measurement_by_key(key)
+    row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         _logger.debug("verify_match key=%s missing measurement", key)
         return missing_measurement_result(key=key, optional=optional)

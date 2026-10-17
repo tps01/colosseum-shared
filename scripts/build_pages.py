@@ -174,7 +174,7 @@ def _write_index(api_docs: list[str], guide_names: list[str]) -> None:
             "   :caption: Overview",
             "",
             "   readme",
-        ]
+        ],
     )
     if guide_names:
         lines.append("")
@@ -184,7 +184,7 @@ def _write_index(api_docs: list[str], guide_names: list[str]) -> None:
                 "   :maxdepth: 2",
                 "   :caption: Guides",
                 "",
-            ]
+            ],
         )
         lines.extend(f"   {name}" for name in guide_names)
     lines.append("")

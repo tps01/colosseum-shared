@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "colosseum-shared"
-version = "0.3.6"
-description = "Colosseum shared utilities plugin (verify, wait, regex, parsing, operator prompts)"
+version = "0.4.0"
+description = "Colosseum shared utilities plugin (verify, wait, measure, regex, parsing, prompts)"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-  "colosseum-core>=0.16.1,<0.17",
+  "colosseum-core>=0.16.4,<0.17",
   "pytest>=8.0",
   "bandit[toml]>=1.7",
   "vulture>=2.11",
@@ -57,6 +57,19 @@ show_error_codes = true
 [[tool.mypy.overrides]]
 module = ["pytest", "tomli"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "colosseum_shared.measure",
+  "colosseum_shared.wait",
+  "colosseum_shared.verify.field",
+  "colosseum_shared.verify.files",
+  "colosseum_shared.verify.meta",
+  "colosseum_shared.verify.time",
+  "colosseum_shared.regex.api",
+  "colosseum_shared.prompt.api",
+]
+disallow_untyped_decorators = false
 
 [tool.bandit]
 exclude_dirs = ["tests", "build", "examples", "docs"]
