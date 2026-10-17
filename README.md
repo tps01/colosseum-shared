@@ -1,5 +1,11 @@
 # Colosseum Shared
 
+## Documentation
+
+API reference (GitHub Pages): https://tps01.github.io/colosseum-shared/
+
+Framework hub: https://tps01.github.io/colosseum-core/
+
 First-party Colosseum plugin providing `col.shared.*` general utilities:
 timed waits, one-off measurements, generic verifications, regex checks, text
 parsing helpers, and operator prompts. Protocol clients such as SSH live in
@@ -72,7 +78,7 @@ col.shared.verify.verify_time_delta(
 col.shared.verify.verify_all_passed(key="summary")
 col.shared.verify.verify_m_of_n(key="summary", m=2, n=3)
 col.shared.prompt.comment(message="Attach probe to J5")
-col.shared.prompt.prompt(message="Confirm DUT power LED is green")
+col.shared.prompt.prompt(message="Confirm the dialog is visible")
 col.shared.prompt.prompt_measurement(message="Enter serial number: ", key="serial")
 col.shared.prompt.prompt_exit(message="Type PASS to continue: ", key="ack", expected="PASS")
 col.endex()
