@@ -1,15 +1,15 @@
 # Colosseum Shared
 
-First-party Colosseum plugin providing `col.shared.*` general utilities
-(generic verifications, regex verification, text parsing, and operator prompts).
-Protocol clients such as SSH live in `colosseum-messaging`
-(`col.messaging.ssh`).
-
 ## Documentation
 
 HTML docs (GitHub Pages): https://tps01.github.io/colosseum-shared/
 
 Framework hub: https://tps01.github.io/colosseum-core/
+
+First-party Colosseum plugin providing `col.shared.*` general utilities
+(generic verifications, regex verification, text parsing, and operator prompts).
+Protocol clients such as SSH live in `colosseum-messaging`
+(`col.messaging.ssh`).
 
 ## Install
 
