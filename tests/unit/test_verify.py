@@ -168,6 +168,46 @@ def test_verify_file_exists_missing_file(tmp_path: Path, monkeypatch: pytest.Mon
     assert result.status == "FAIL"
 
 
+def test_verify_file_contents_count_and_invert(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    log = ctx.output_dir / "uut.log"
+    log.write_text("INFO ok\nERROR a\nERROR b\nINFO done\n", encoding="utf-8")
+
+    assert col.shared.verify.verify_file_contents(
+        key="errors", path="uut.log", pattern=r"ERROR", count=2,
+    ).status == "PASS"
+    assert col.shared.verify.verify_file_contents(
+        key="errors_low", path="uut.log", pattern=r"ERROR", count=3,
+    ).status == "FAIL"
+    assert col.shared.verify.verify_file_contents(
+        key="no_fatal", path="uut.log", pattern=r"FATAL", invert=True,
+    ).status == "PASS"
+    assert col.shared.verify.verify_file_contents(
+        key="few_errors", path="uut.log", pattern=r"ERROR", count=3, invert=True,
+    ).status == "PASS"
+    assert col.shared.verify.verify_file_contents(
+        key="too_many", path="uut.log", pattern=r"ERROR", count=2, invert=True,
+    ).status == "FAIL"
+
+
+def test_verify_file_contents_from_measurement_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    (ctx.output_dir / "note.txt").write_text("alpha beta alpha\n", encoding="utf-8")
+    _record_text(key="note", value="note.txt")
+    result = col.shared.verify.verify_file_contents(
+        key="note", pattern=r"alpha", count=2,
+    )
+    assert result.status == "PASS"
+
+
 def test_verify_new_file_and_no_new_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
