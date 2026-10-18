@@ -7,6 +7,7 @@ API reference (Sphinx autodoc) is primary; README/guides are secondary.
 from __future__ import annotations
 
 import argparse
+import ast
 import shutil
 import subprocess
 import sys
@@ -30,8 +31,11 @@ API_MODULES: tuple[tuple[str, str, str], ...] = (
 )
 # Optional single-function pages: (rst_stem, "module:qualname", displayed name)
 API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
+    ('measure_value', 'colosseum_shared.measure.measure_value', 'col.shared.measure_value'),
+    ('measure_env', 'colosseum_shared.measure.measure_env', 'col.shared.measure_env'),
+    ('measure_mark', 'colosseum_shared.measure.measure_mark', 'col.shared.measure_mark'),
 )
-GUIDES: tuple[str, ...] = ('docs/sphinx/source/guides/getting_started.rst',)
+GUIDES: tuple[str, ...] = ('docs/sphinx/source/guides/getting_started.rst', 'docs/sphinx/source/guides/evidence_workflows.rst')
 # --- end per-plugin constants ---
 
 HUB_URL = "https://tps01.github.io/colosseum-core/"
@@ -215,6 +219,14 @@ def _copy_branding() -> None:
 
 
 def stage() -> None:
+    # Fail when a root API export has no reference/navigation entry.
+    api_source = REPO_ROOT / "colosseum_shared" / "api" / "__init__.py"
+    exported = next(ast.literal_eval(node.value) for node in ast.parse(api_source.read_text(encoding="utf-8-sig")).body
+                    if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets))
+    documented = {path.rsplit(".", 1)[-1] for _, _, path in (*API_MODULES, *API_FUNCTIONS)}
+    missing = set(exported) - documented
+    if missing:
+        raise SystemExit(f"Public API missing from Pages inventory: {sorted(missing)}")
     if SITE_SOURCE.exists():
         shutil.rmtree(SITE_SOURCE)
     SITE_SOURCE.mkdir(parents=True)
@@ -250,7 +262,7 @@ def build_html() -> Path:
     if HTML_DIR.exists():
         shutil.rmtree(HTML_DIR)
     HTML_DIR.mkdir(parents=True)
-    # Do not treat every autodoc nit as fatal; keep going for partial import issues.
+    # Report all warnings, then fail the build if any remain.
     subprocess.run(
         [
             sys.executable,

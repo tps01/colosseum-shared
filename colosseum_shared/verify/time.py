@@ -93,7 +93,9 @@ def verify_elapsed(
     """Verify wall-clock elapsed since a ``measure_mark`` is at most ``maximum_s``.
 
     Uses ``time.perf_counter()`` values stored by ``col.shared.measure_mark``, not
-    database row timestamps (see ``verify_time_delta`` for those).
+    database row timestamps (see ``verify_time_delta`` for those). Use a mark
+    from the current timing session; imported values from another run or
+    machine are not portable elapsed-time evidence.
 
     :param key: Verification evidence key.
     :type key: str
