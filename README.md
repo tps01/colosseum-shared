@@ -14,11 +14,15 @@ is not part of this package.
 
 ## Install
 
+Download the wheel from [GitHub Releases](https://github.com/tps01/colosseum-shared/releases)
+and install it in the same environment as core. Replace `<version>` with
+the downloaded filename. For development, use `python -m pip install -e .`.
+
 ```bash
-pip install colosseum-shared
+python -m pip install "./colosseum_shared-<version>-py3-none-any.whl"
 ```
 
-This requires `colosseum-core` 0.16.4+ and registers the `shared` namespace
+This requires `colosseum-core` `>=0.17.0,<0.18` and registers the `shared` namespace
 through the `colosseum.plugins` entry point.
 
 ## Generic fallbacks
@@ -34,65 +38,51 @@ through the `colosseum.plugins` entry point.
 | File exists / contents | `verify.verify_file_*` |
 | Intentional PASS/FAIL | `verify.verify_pass` / `verify.verify_fail` |
 | Operator input | `prompt.*` (needs interactive stdin / TTY) |
-| Parse floats / KV | `parsing.text.*` (undecorated helpers, not evidence) |
+| Parse floats / KV | `col.shared.parsing.*` (undecorated helpers, not evidence) |
 
 File reads assume UTF-8. Prompts block on stdin and may require a TTY on Unix.
 
 ## Usage
 
+From this repository root, run the complete, non-interactive example:
+
+```bash
+colosseum run examples/portable_checks.py -g examples/configs/config.shared.sim.toml
+```
+
+It creates its own file fixtures and demonstrates structured fields, parsing,
+regex, file/timing checks and optional trial voting. Expected exit: 0, with one
+intentional optional FAIL retained in the results. See
+[portable evidence workflows](https://tps01.github.io/colosseum-shared/guides/evidence_workflows.html).
+
 ```python
 import colosseum as col
 
-col.config.load_config("examples/configs/config.shared.sim.toml")
-col.shared.wait(duration=2)
-col.shared.wait(duration="500ms", progress_bar=True)
-col.shared.measure_value(key="uut_version", value="v1.2.3")
-col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
-col.shared.verify.verify_field(key="uut_version", expected_val="v1.2.3")
-col.shared.verify.verify_measurement_exists(key="uut_version")
-col.shared.measure_mark(key="t0")
-# ... work ...
-col.shared.verify.verify_elapsed(key="budget", mark_key="t0", maximum_s=30.0)
-col.shared.verify.verify_file_exists(key="profile", path="profile.json")
-col.shared.verify.verify_file_contents(
-    key="log_has_error",
-    path="uut.log",
-    pattern=r"ERROR",
-    count=1,
-)
-before = col.shared.verify.snapshot_files("captures", pattern="*_screenshot.*")
-# ... trigger the product ...
-col.shared.verify.verify_new_file(
-    key="shot",
-    directory="captures",
-    before=before,
-    pattern="*_screenshot.*",
-    timeout_s=15.0,
-)
-col.shared.verify.verify_time_delta(
-    key="ready",
-    other_key="power_on",
-    expected_s=5.0,
-    tolerance_s=0.5,
-)
-col.shared.verify.verify_all_passed(key="summary")
-col.shared.verify.verify_m_of_n(key="summary", m=2, n=3)
-col.shared.prompt.comment(message="Attach probe to J5")
-col.shared.prompt.prompt(message="Confirm the dialog is visible")
-col.shared.prompt.prompt_measurement(message="Enter serial number: ", key="serial")
-col.shared.prompt.prompt_exit(message="Type PASS to continue: ", key="ack", expected="PASS")
-col.endex()
+def main():
+    col.shared.measure_value(key="version", value="v1.2.3")
+    col.shared.regex.verify_match(key="version", pattern=r"^v\d+\.\d+\.\d+$")
+    col.shared.verify.verify_field(key="version", expected_val="v1.2.3")
+
+if __name__ == "__main__":
+    col.config.load_config("examples/configs/config.shared.sim.toml")
+    main()
+    col.endex()
 ```
 
-SSH remote exec is `col.messaging.ssh.measure_stdout` from
-`colosseum-messaging`.
+Operator prompts are a separate interactive example:
+`colosseum run examples/operator_prompt.py` (requires stdin/TTY; excluded from CI).
+Shared field/regex checks choose the latest measurement with the key across all
+domains. Use distinct keys for distinct facts. Timing marks are local to the
+current timing session; file checks require actual accessible files.
 
 ## Expected artifacts
 
 Normal CLI runs write `summary.json`, `summary.txt`, `execution.sqlite`, and
-`debug.log` under the run output directory. When metadata is loaded (see
-`examples/configs/metadata.yaml`), core also emits a WATS-format
-`wats_<datetime>_<script>.json` report alongside those files.
+`debug.log` under the run output directory. Reports are opt-in: add
+`--report wats` to the run command to write `wats_<datetime>_<script>.json`,
+or `--report junit` for `junit.xml`. Loading `metadata.yaml` enriches an
+enabled report; it does not enable reporting. See the
+[core reporting guide](https://tps01.github.io/colosseum-core/guides/output_artifacts.html).
 
 ## Develop
 
