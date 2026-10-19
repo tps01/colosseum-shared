@@ -93,3 +93,16 @@ pytest
 ruff check .
 mypy
 ```
+
+### Inclusive numeric bounds (0.5.0+)
+
+```python
+col.shared.measure_value(key="jitter_ps", value=2.0)
+col.shared.verify.verify_field(key="jitter_ps", minimum=0.0, maximum=5.0)
+col.shared.measure_value(key="harmonic_dbc", value=-60.0)
+col.shared.verify.verify_field(key="harmonic_dbc", maximum=-40.0)
+```
+
+Use either `expected_val` / `tolerance` or `minimum` / `maximum`. Bounds are
+inclusive, must be finite and ordered, and reject nonnumeric/non-finite evidence.
+Missing comparison arguments produce ERROR rather than an implicit verdict.

@@ -71,6 +71,21 @@ def compare_expected(
     tolerance: float,
     optional: bool,
 ) -> VerificationResult:
+    if isinstance(expected_val, bool):
+        if not isinstance(actual, bool):
+            return VerificationResult(
+                status="ERROR",
+                message=f"expected Boolean evidence, got {actual!r}",
+                optional=optional,
+                actual=actual,
+            )
+        passed = actual is expected_val
+        return VerificationResult(
+            status="PASS" if passed else "FAIL",
+            message="" if passed else f"expected {expected_val!r}, got {actual!r}",
+            optional=optional,
+            actual=actual,
+        )
     if isinstance(expected_val, (int, float)):
         try:
             actual_num = float(str(actual))

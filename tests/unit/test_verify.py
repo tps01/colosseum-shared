@@ -3,17 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import colosseum as col
+import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
 from colosseum.database import MeasurementRow
 from colosseum.decorators import VerificationResult, measurement, verification
 from colosseum.runner.paths import ensure_runtime_ready
-
-if TYPE_CHECKING:
-    import pytest
 
 
 @measurement
@@ -314,3 +311,76 @@ def test_verify_match_uses_latest_measurement_by_key(
     )
     result = col.shared.regex.verify_match(key="marker", pattern=r"^second$")
     assert result.status == "PASS"
+
+
+@pytest.mark.parametrize(
+    "actual,limits,status",
+    [
+        (2.0, {"maximum": 5.0}, "PASS"),
+        (5.0, {"maximum": 5.0}, "PASS"),
+        (8.0, {"maximum": 5.0}, "FAIL"),
+        (2.0, {"minimum": 5.0}, "FAIL"),
+        (5.0, {"minimum": 5.0}, "PASS"),
+        (8.0, {"minimum": 5.0}, "PASS"),
+        (-60.0, {"maximum": -40.0}, "PASS"),
+        (-20.0, {"maximum": -40.0}, "FAIL"),
+        (-6.0, {"minimum": -5.0, "maximum": 5.0}, "FAIL"),
+        (-5.0, {"minimum": -5.0, "maximum": 5.0}, "PASS"),
+        (0.0, {"minimum": -5.0, "maximum": 5.0}, "PASS"),
+        (5.0, {"minimum": -5.0, "maximum": 5.0}, "PASS"),
+        (6.0, {"minimum": -5.0, "maximum": 5.0}, "FAIL"),
+        (float("nan"), {"maximum": 5.0}, "ERROR"),
+        (float("inf"), {"minimum": 5.0}, "ERROR"),
+        (2.0, {"minimum": 5.0, "maximum": 1.0}, "ERROR"),
+        (2.0, {"minimum": float("nan")}, "ERROR"),
+        (2.0, {"maximum": float("inf")}, "ERROR"),
+        (2.0, {"minimum": True}, "ERROR"),
+        (2.0, {"minimum": 1.0, "expected_val": 2.0}, "ERROR"),
+        (2.0, {"maximum": 5.0, "tolerance": 1.0}, "ERROR"),
+        (2.0, {}, "ERROR"),
+        ("not a number", {"maximum": 5.0}, "ERROR"),
+        (None, {"expected_val": None}, "PASS"),
+    ],
+)
+def test_verify_field_bounds(tmp_path, monkeypatch, actual, limits, status):
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="bounded", value={"value": actual})
+    result = col.shared.verify.verify_field(key="bounded", field="value", **limits)
+    assert result.status == status
+
+
+def test_verify_field_optional_bound_failure_is_retained(tmp_path, monkeypatch):
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="bounded", value=8.0)
+    result = col.shared.verify.verify_field(key="bounded", maximum=5.0, optional=True)
+    assert result.status == "FAIL"
+    assert result.optional is True
+    assert get_context().db.fetch_all_verifications()[-1].optional is True
+
+
+def test_verify_field_bounds_from_parameters(tmp_path, monkeypatch):
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="bounded", value=5.0)
+    get_context().parameters_map = {"bounded": {"minimum": 0.0, "maximum": 5.0}}
+    assert col.shared.verify.verify_field(key="bounded").status == "PASS"
+
+
+@pytest.mark.parametrize(
+    "actual,expected,status",
+    [
+        (True, True, "PASS"),
+        (False, False, "PASS"),
+        (True, False, "FAIL"),
+        (False, True, "FAIL"),
+        (1, True, "ERROR"),
+        (0, False, "ERROR"),
+        ("True", True, "ERROR"),
+        ("False", False, "ERROR"),
+    ],
+)
+def test_verify_field_boolean(tmp_path, monkeypatch, actual, expected, status):
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="pin", value={"level": actual})
+    result = col.shared.verify.verify_field(key="pin", field="level", expected_val=expected)
+    assert result.status == status
+    assert result.actual == actual
