@@ -23,6 +23,17 @@ across **all domains and command names**. Use distinct keys for distinct facts;
 reusing a key in another plugin can change which value a shared verifier checks.
 ``field=`` selects a dictionary/JSON field rather than the entire value.
 
+For numeric limits, use inclusive ``minimum`` and/or ``maximum`` (Shared 0.5.0+)::
+
+   col.shared.measure_value(key="jitter_ps", value=2.0)
+   col.shared.verify.verify_field(key="jitter_ps", minimum=0.0, maximum=5.0)
+   col.shared.measure_value(key="harmonic_dbc", value=-60.0)
+   col.shared.verify.verify_field(key="harmonic_dbc", maximum=-40.0)
+
+Do not combine bounds with ``expected_val`` / ``tolerance``. Invalid or non-finite
+bounds/evidence produce ERROR. Boolean expectations require actual Boolean
+evidence; integers and strings do not stand in for ``True`` / ``False``.
+
 ``verify_m_of_n`` checks the latest ``n`` prior verification results, excluding
 optional results unless ``include_optional=True``. It cannot undo required
 failures already recorded. For a trial-voting policy, mark each trial optional
