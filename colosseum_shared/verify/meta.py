@@ -12,6 +12,7 @@ _logger = get_logger("colosseum.shared")
 
 
 @verification
+@with_verify_command("verify_all_passed")
 def verify_all_passed(
     *,
     key: str,
@@ -52,10 +53,8 @@ def verify_all_passed(
     )
 
 
-verify_all_passed = with_verify_command(verify_all_passed, "verify_all_passed")
-
-
 @verification
+@with_verify_command("verify_m_of_n")
 def verify_m_of_n(
     *,
     key: str,
@@ -66,11 +65,15 @@ def verify_m_of_n(
 ) -> VerificationResult:
     """Verify at least ``m`` of the last ``n`` prior verifications have PASS status.
 
+    ``m`` and ``n`` must be integers with ``0 < m <= n``. Any other window is
+    ERROR and does not consult prior results. Zero required passes is not a
+    policy.
+
     :param key: Verification evidence key.
     :type key: str
-    :param m: Minimum number of PASS results required.
+    :param m: Minimum number of PASS results required. Integer, ``0 < m <= n``.
     :type m: int
-    :param n: Number of most recent prior verifications to consider.
+    :param n: Number of most recent prior verifications to consider. Positive integer.
     :type n: int
     :param include_optional: When ``True``, optional verifications are included in the window.
     :type include_optional: bool, optional
@@ -80,6 +83,20 @@ def verify_m_of_n(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if (
+        isinstance(m, bool)
+        or isinstance(n, bool)
+        or not isinstance(m, int)
+        or not isinstance(n, int)
+        or m <= 0
+        or n <= 0
+        or m > n
+    ):
+        return VerificationResult(
+            status="ERROR",
+            message=f"m and n must be integers with 0 < m <= n, got m={m!r} n={n!r}",
+            optional=optional,
+        )
     rows = prior_verifications(include_optional=include_optional)
     if len(rows) < n:
         return VerificationResult(
@@ -100,10 +117,8 @@ def verify_m_of_n(
     )
 
 
-verify_m_of_n = with_verify_command(verify_m_of_n, "verify_m_of_n")
-
-
 @verification
+@with_verify_command("verify_pass")
 def verify_pass(*, key: str, message: str = "", optional: bool = False) -> VerificationResult:
     """Record an intentional PASS verification marker.
 
@@ -121,10 +136,8 @@ def verify_pass(*, key: str, message: str = "", optional: bool = False) -> Verif
     return VerificationResult(status="PASS", message=message, optional=optional)
 
 
-verify_pass = with_verify_command(verify_pass, "verify_pass")
-
-
 @verification
+@with_verify_command("verify_fail")
 def verify_fail(
     *,
     key: str,
@@ -145,6 +158,3 @@ def verify_fail(
     """
     _ = key
     return VerificationResult(status="FAIL", message=message, optional=optional)
-
-
-verify_fail = with_verify_command(verify_fail, "verify_fail")

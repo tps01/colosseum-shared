@@ -31,11 +31,15 @@ For numeric limits, use inclusive ``minimum`` and/or ``maximum`` (Shared 0.5.0+)
    col.shared.verify.verify_field(key="harmonic_dbc", maximum=-40.0)
 
 Do not combine bounds with ``expected_val`` / ``tolerance``. Invalid or non-finite
-bounds/evidence produce ERROR. Boolean expectations require actual Boolean
-evidence; integers and strings do not stand in for ``True`` / ``False``.
+bounds/evidence produce ERROR. Numeric expectations also require finite evidence,
+a finite expectation, and a finite nonnegative tolerance. Integers, including
+integer strings, compare exactly when the other side is an integer. Boolean
+expectations require actual Boolean evidence; integers and strings do not stand
+in for ``True`` / ``False``.
 
 ``verify_m_of_n`` checks the latest ``n`` prior verification results, excluding
-optional results unless ``include_optional=True``. It cannot undo required
+optional results unless ``include_optional=True``. ``m`` and ``n`` must be
+integers with ``0 < m <= n``; any other window is ERROR. It cannot undo required
 failures already recorded. For a trial-voting policy, mark each trial optional
 and make the final m-of-n check required. ``verify_all_passed`` excludes optional
 results by default and examines every earlier required result in the run.

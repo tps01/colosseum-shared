@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from math import isfinite
 
 _TOKEN_RE = re.compile(
     r"(?P<value>\d+(?:\.\d+)?)(?P<unit>w|d|h|ms|us|µs|m|s)",
@@ -22,24 +23,30 @@ _UNIT_SECONDS = {
 }
 
 
+def _finite_nonnegative_seconds(seconds: float, original: object) -> float:
+    if not isfinite(seconds):
+        raise ValueError(f"duration must be finite, got {original!r}")
+    if seconds < 0:
+        raise ValueError(f"duration must be non-negative, got {original!r}")
+    return seconds
+
+
 def parse_duration(duration: float | int | str) -> float:
-    """Return a non-negative duration in seconds.
+    """Return a finite, non-negative duration in seconds.
 
     Bare numbers (``int``, ``float``, or numeric strings) are seconds.
     Unit suffixes follow common Python/timedelta style: ``us``/``µs``, ``ms``,
     ``s``, ``m``, ``h``, ``d``, ``w`` (combinable, e.g. ``1h30m``).
+    Zero is allowed. Negative and non-finite values are rejected.
     """
     if isinstance(duration, (int, float)):
-        seconds = float(duration)
-        if seconds < 0:
-            raise ValueError(f"duration must be non-negative, got {duration!r}")
-        return seconds
+        return _finite_nonnegative_seconds(float(duration), duration)
 
     text = str(duration).strip()
     if not text:
         raise ValueError("duration must not be empty")
     if _BARE_NUMBER_RE.fullmatch(text):
-        return float(text)
+        return _finite_nonnegative_seconds(float(text), duration)
 
     pos = 0
     total = 0.0
@@ -51,7 +58,7 @@ def parse_duration(duration: float | int | str) -> float:
         pos = match.end()
     else:
         if pos == len(text) and pos > 0:
-            return total
+            return _finite_nonnegative_seconds(total, duration)
 
     raise ValueError(
         f"Invalid duration {duration!r}; use a number of seconds or "

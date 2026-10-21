@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import time
+from math import isfinite
 
 from colosseum.decorators import command
 from colosseum.logging import get_logger
@@ -14,7 +15,9 @@ _logger = get_logger("colosseum.shared")
 
 
 def _sleep_with_progress(seconds: float) -> None:
-    if seconds <= 0:
+    if not isfinite(seconds) or seconds < 0:
+        raise ValueError(f"duration must be finite and non-negative, got {seconds!r}")
+    if seconds == 0:
         return
     width = 40
     start = time.monotonic()
@@ -38,7 +41,7 @@ def wait(*, duration: float | int | str, progress_bar: bool = False) -> None:
 
     :param duration: Wait length. Bare numbers are seconds; strings may use
         ``us``/``µs``, ``ms``, ``s``, ``m``, ``h``, ``d``, ``w`` (e.g. ``500ms``,
-        ``1h30m``).
+        ``1h30m``). Must be finite and nonnegative; zero returns immediately.
     :param progress_bar: When ``True``, print a progress bar to stdout while waiting.
     """
     seconds = parse_duration(duration)

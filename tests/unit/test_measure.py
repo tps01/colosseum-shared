@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import colosseum as col
+import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
 from colosseum.runner.paths import ensure_runtime_ready
-
-if TYPE_CHECKING:
-    import pytest
 
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -58,6 +55,31 @@ def test_measure_mark_and_verify_elapsed(
     assert col.shared.verify.verify_elapsed(
         key="elapsed_fail", mark_key="t0", maximum_s=0.0,
     ).status == "FAIL"
+
+
+@pytest.mark.parametrize(
+    ("mark", "maximum_s"),
+    [
+        (float("inf"), 1.0),
+        (float("nan"), 1.0),
+        (0.0, float("inf")),
+        (0.0, float("nan")),
+        (0.0, -1.0),
+    ],
+)
+def test_verify_elapsed_rejects_nonfinite_mark_or_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    mark: float,
+    maximum_s: float,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="mark", value=mark)
+    result = col.shared.verify.verify_elapsed(
+        key="elapsed", mark_key="mark", maximum_s=maximum_s,
+    )
+    assert result.status == "ERROR"
+    assert result.actual != float("-inf")
 
 
 def test_verify_pass_and_fail_markers(

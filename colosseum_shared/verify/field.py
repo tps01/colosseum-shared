@@ -16,6 +16,7 @@ from colosseum_shared._evidence import (
     extract_field,
     latest_measurement_by_key,
     measurement_exists,
+    within_inclusive_bounds,
 )
 from colosseum_shared.verify._command import with_verify_command
 
@@ -24,6 +25,7 @@ _UNSET = object()
 
 
 @verification
+@with_verify_command("verify_field")
 def verify_field(
     *,
     key: str,
@@ -36,6 +38,12 @@ def verify_field(
 ) -> VerificationResult:
     """Verify an expected field value or inclusive numeric bounds.
 
+    Integer evidence compared with an integer expectation or limit uses exact
+    arithmetic, including an integer string such as ``"9007199254740993"``.
+    Floats and non-integer numeric strings keep absolute tolerance. Numeric
+    comparisons require finite evidence, a finite expectation, and a finite
+    nonnegative tolerance.
+
     :param key: Measurement key shared with a prior measurement in any domain.
     :type key: str
     :param expected_val: Expected value (strict Boolean, numeric with tolerance,
@@ -43,11 +51,14 @@ def verify_field(
     :type expected_val: object
     :param field: Optional key within a dict/JSON measurement value.
     :type field: str | None, optional
-    :param tolerance: Allowed absolute difference for numeric ``expected_val``.
+    :param tolerance: Finite nonnegative absolute difference for numeric ``expected_val``.
+        Zero tolerance is exact equality for integers.
     :type tolerance: float, optional
     :param minimum: Inclusive lower bound, mutually exclusive with expected_val/tolerance.
+        Integers compare exactly.
     :type minimum: float | None, optional
     :param maximum: Inclusive upper bound; may be combined with minimum.
+        Integers compare exactly.
     :type maximum: float | None, optional
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
@@ -79,15 +90,14 @@ def verify_field(
                 raise ValueError("Bounds must be finite numbers")
         if minimum is not None and maximum is not None and minimum > maximum:
             raise ValueError("minimum must not exceed maximum")
-        actual_num = float(str(actual))
-        if not isfinite(actual_num):
-            raise ValueError("Bounded measurement must be finite")
-        passed = (minimum is None or actual_num >= minimum) and (
-            maximum is None or actual_num <= maximum
+        passed, shown = within_inclusive_bounds(
+            actual,
+            minimum=minimum,
+            maximum=maximum,
         )
         return VerificationResult(
             status="PASS" if passed else "FAIL",
-            message=f"expected minimum={minimum}, maximum={maximum}; got {actual_num}",
+            message=f"expected minimum={minimum}, maximum={maximum}; got {shown}",
             optional=optional,
             actual=actual,
         )
@@ -101,10 +111,8 @@ def verify_field(
     )
 
 
-verify_field = with_verify_command(verify_field, "verify_field")
-
-
 @verification
+@with_verify_command("verify_measurement_exists")
 def verify_measurement_exists(*, key: str, optional: bool = False) -> VerificationResult:
     """Verify a measurement row exists for ``key`` in any domain.
 
@@ -123,13 +131,8 @@ def verify_measurement_exists(*, key: str, optional: bool = False) -> Verificati
     return missing_measurement_result(key=key, optional=optional)
 
 
-verify_measurement_exists = with_verify_command(
-    verify_measurement_exists,
-    "verify_measurement_exists",
-)
-
-
 @verification
+@with_verify_command("verify_env")
 def verify_env(
     *,
     key: str,
@@ -160,6 +163,3 @@ def verify_env(
         optional=optional,
         actual=actual,
     )
-
-
-verify_env = with_verify_command(verify_env, "verify_env")

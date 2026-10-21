@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from math import isfinite
 from typing import TYPE_CHECKING
 
 from colosseum.decorators import (
@@ -23,13 +24,16 @@ _logger = get_logger("colosseum.shared")
 
 
 @verification
+@with_verify_command("verify_file_exists")
 def verify_file_exists(
     *,
     key: str,
     path: str | None = None,
     optional: bool = False,
 ) -> VerificationResult:
-    """Verify a file exists on disk, optionally using a prior measurement as the path.
+    """Verify a regular file exists on disk, optionally using a prior measurement as the path.
+
+    A directory does not pass.
 
     :param key: Verification evidence key (and measurement key when ``path`` is omitted).
     :type key: str
@@ -55,9 +59,9 @@ def verify_file_exists(
             optional=optional,
         )
     resolved = resolve_path(file_path)
-    exists = resolved.exists()
-    _logger.debug("verify_file_exists key=%s path=%s exists=%s", key, resolved, exists)
-    if exists:
+    is_regular = resolved.is_file()
+    _logger.debug("verify_file_exists key=%s path=%s is_file=%s", key, resolved, is_regular)
+    if is_regular:
         return VerificationResult(
             status="PASS",
             message="",
@@ -72,10 +76,8 @@ def verify_file_exists(
     )
 
 
-verify_file_exists = with_verify_command(verify_file_exists, "verify_file_exists")
-
-
 @verification
+@with_verify_command("verify_file_contents")
 def verify_file_contents(
     *,
     key: str,
@@ -181,11 +183,26 @@ def verify_file_contents(
     )
 
 
-verify_file_contents = with_verify_command(verify_file_contents, "verify_file_contents")
+def _relative_file_id(root: Path, path: Path) -> str:
+    """Identity of ``path`` relative to the monitored directory, with POSIX separators."""
+    return path.relative_to(root).as_posix()
+
+
+def _require_nonnegative_finite(label: str, value: float) -> None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{label} must be a finite nonnegative number, got {value!r}") from exc
+    if not isfinite(number) or number < 0:
+        raise ValueError(f"{label} must be a finite nonnegative number, got {value!r}")
 
 
 def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
-    """Return basenames currently matching ``pattern`` under ``directory``.
+    """Return paths relative to ``directory`` for files matching ``pattern``.
+
+    Identifiers use POSIX separators. A file directly in ``directory`` is still
+    just its name, so a non-recursive snapshot is unchanged. Nested matches such
+    as ``a/result.txt`` and ``b/result.txt`` stay distinct.
 
     :param directory: Absolute directory, or relative to the run output directory.
     :param pattern: Glob relative to ``directory`` (for example ``*_screenshot.*``).
@@ -193,7 +210,9 @@ def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
     root = resolve_path(directory)
     if not root.is_dir():
         return set()
-    return {path.name for path in root.glob(pattern) if path.is_file()}
+    return {
+        _relative_file_id(root, path) for path in root.glob(pattern) if path.is_file()
+    }
 
 
 def wait_for_new_file(
@@ -207,21 +226,26 @@ def wait_for_new_file(
     """Poll until a new file matching ``pattern`` appears; return its path or ``None``.
 
     ``before`` is typically ``snapshot_files(...)`` taken before the action under test.
-    When omitted, an empty set is used (any matching file counts as new).
+    Entries are paths relative to ``directory``. When omitted, an empty set is used
+    (any matching file counts as new). ``timeout_s`` and ``poll_s`` must be finite
+    and nonnegative; zero timeout returns without waiting.
     """
+    _require_nonnegative_finite("timeout_s", timeout_s)
+    _require_nonnegative_finite("poll_s", poll_s)
     root = resolve_path(directory)
     seen = set() if before is None else set(before)
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
         if root.is_dir():
             for path in root.glob(pattern):
-                if path.is_file() and path.name not in seen:
+                if path.is_file() and _relative_file_id(root, path) not in seen:
                     return path
         time.sleep(poll_s)
     return None
 
 
 @verification
+@with_verify_command("verify_new_file")
 def verify_new_file(
     *,
     key: str,
@@ -235,9 +259,9 @@ def verify_new_file(
 
     :param key: Verification evidence key.
     :param directory: Absolute directory, or relative to the run output directory.
-    :param before: Basenames from ``snapshot_files`` before the triggering action.
+    :param before: Relative paths from ``snapshot_files`` before the triggering action.
     :param pattern: Glob relative to ``directory``.
-    :param timeout_s: How long to wait for a new match.
+    :param timeout_s: How long to wait for a new match. Finite and nonnegative.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
     """
     _ = key
@@ -248,9 +272,10 @@ def verify_new_file(
         timeout_s=timeout_s,
     )
     if found is not None:
+        relative = _relative_file_id(resolve_path(directory), found)
         return VerificationResult(
             status="PASS",
-            message=f"new file {found.name}",
+            message=f"new file {relative}",
             optional=optional,
             actual=str(found),
         )
@@ -261,10 +286,8 @@ def verify_new_file(
     )
 
 
-verify_new_file = with_verify_command(verify_new_file, "verify_new_file")
-
-
 @verification
+@with_verify_command("verify_no_new_file")
 def verify_no_new_file(
     *,
     key: str,
@@ -278,12 +301,14 @@ def verify_no_new_file(
 
     :param key: Verification evidence key.
     :param directory: Absolute directory, or relative to the run output directory.
-    :param before: Basenames from ``snapshot_files`` before the quiet period.
+    :param before: Relative paths from ``snapshot_files`` before the quiet period.
     :param pattern: Glob relative to ``directory``.
-    :param settle_s: How long the directory must stay quiet.
+    :param settle_s: How long the directory must stay quiet. Finite and nonnegative;
+        zero returns immediately.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
     """
     _ = key
+    _require_nonnegative_finite("settle_s", settle_s)
     found = wait_for_new_file(
         directory,
         before=before,
@@ -296,12 +321,10 @@ def verify_no_new_file(
             message=f"quiet for {settle_s:.1f}s",
             optional=optional,
         )
+    relative = _relative_file_id(resolve_path(directory), found)
     return VerificationResult(
         status="FAIL",
-        message=f"unexpected new file {found.name}",
+        message=f"unexpected new file {relative}",
         optional=optional,
         actual=str(found),
     )
-
-
-verify_no_new_file = with_verify_command(verify_no_new_file, "verify_no_new_file")
