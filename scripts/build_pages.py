@@ -34,6 +34,7 @@ API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
     ('measure_value', 'colosseum_shared.measure.measure_value', 'col.shared.measure_value'),
     ('measure_env', 'colosseum_shared.measure.measure_env', 'col.shared.measure_env'),
     ('measure_mark', 'colosseum_shared.measure.measure_mark', 'col.shared.measure_mark'),
+    ('comment', 'colosseum_shared.prompt.api.comment', 'col.shared.comment'),
 )
 GUIDES: tuple[str, ...] = (
     "docs/sphinx/source/guides/getting_started.rst",
@@ -149,14 +150,17 @@ User-facing APIs under ``{col_path}`` (``import colosseum as col``).
     return f"api/{stem}"
 
 
-def _write_function_page(stem: str, target: str, col_path: str) -> str:
+def _write_function_page(
+    stem: str, target: str, col_path: str, *, no_index: bool = False,
+) -> str:
     api_dir = SITE_SOURCE / "api"
     api_dir.mkdir(parents=True, exist_ok=True)
     title = col_path
+    options = "\n   :no-index:" if no_index else ""
     body = f"""{title}
 {"=" * len(title)}
 
-.. autofunction:: {target}
+.. autofunction:: {target}{options}
 """
     (api_dir / f"{stem}.rst").write_text(body, encoding="utf-8")
     return f"api/{stem}"
@@ -248,7 +252,9 @@ def stage() -> None:
     for stem, module, col_path in API_MODULES:
         api_docs.append(_write_module_page(stem, module, col_path))
     for stem, target, col_path in API_FUNCTIONS:
-        api_docs.append(_write_function_page(stem, target, col_path))
+        api_docs.append(
+            _write_function_page(stem, target, col_path, no_index=stem == "comment"),
+        )
     if not api_docs:
         raise SystemExit("API_MODULES / API_FUNCTIONS must list at least one public API")
 

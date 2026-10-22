@@ -9,6 +9,7 @@ import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
 from colosseum.runner.paths import ensure_runtime_ready
+from colosseum_shared.api import comment as shared_comment
 from colosseum_shared.prompt import api as prompt_api
 
 _PROMPT_MEASUREMENT_COMMAND = "prompt.prompt_measurement"
@@ -21,6 +22,10 @@ def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     ensure_runtime_ready(get_context())
+
+
+def test_shared_comment_is_prompt_comment() -> None:
+    assert shared_comment is prompt_api.comment
 
 
 def test_comment_logs_info(

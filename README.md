@@ -37,6 +37,7 @@ through the `colosseum.plugins` entry point.
 | Regex on measurement | `regex.verify_match` |
 | File exists / contents | `verify.verify_file_*` |
 | Intentional PASS/FAIL | `verify.verify_pass` / `verify.verify_fail` |
+| Annotate the run | `col.shared.comment(message=…)` |
 | Operator input | `prompt.*` (needs interactive stdin / TTY) |
 | Parse floats / KV | `col.shared.parsing.*` (undecorated helpers, not evidence) |
 
@@ -105,7 +106,10 @@ col.shared.verify.verify_field(key="harmonic_dbc", maximum=-40.0)
 
 Use either `expected_val` / `tolerance` or `minimum` / `maximum`. Bounds are
 inclusive, must be finite and ordered, and reject nonnumeric/non-finite evidence.
-Numeric `expected_val` checks also require finite evidence, a finite expectation,
+Missing comparison arguments produce ERROR rather than an implicit verdict.
+
+### Finite tolerances and exact integers (0.6.0+)
+
+Numeric `expected_val` checks require finite evidence, a finite expectation,
 and a finite nonnegative tolerance. Integers, including integer strings, compare
-exactly when the other side is an integer. Missing comparison arguments produce
-ERROR rather than an implicit verdict.
+exactly when the other side is an integer.
