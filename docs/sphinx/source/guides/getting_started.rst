@@ -28,7 +28,8 @@ An empty or comment-only file is enough when you only call ``col.shared.*``::
        col.shared.verify.verify_elapsed(key="budget", mark_key="t0", maximum_s=30.0)
 
 Other common verifies: ``verify_file_exists``, ``verify_new_file``,
-``verify_pass`` / ``verify_fail``, ``prompt.comment``. See the package README
+``verify_pass`` / ``verify_fail``, ``col.shared.comment`` (also
+``prompt.comment``). See the package README
 table for the full catalog. RF analysis (``col.shared.signal``) is **not** in
 this package.
 

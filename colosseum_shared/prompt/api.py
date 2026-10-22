@@ -74,9 +74,9 @@ def prompt_measurement(*, message: str, key: str) -> str:
 
 @command
 def comment(*, message: str) -> None:
-    """Log an operator or test annotation at INFO in ``debug.log``.
+    """Log a test annotation at INFO on the run console and in ``debug.log``.
 
-    :param message: Text written to the Colosseum log.
+    :param message: Text written at INFO.
     :type message: str
 
     :returns: None
