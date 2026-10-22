@@ -34,9 +34,14 @@ Do not combine bounds with ``expected_val`` / ``tolerance``. Invalid or non-fini
 bounds/evidence produce ERROR. Boolean expectations require actual Boolean
 evidence; integers and strings do not stand in for ``True`` / ``False``.
 
+Shared 0.6.0 requires numeric expectations to use finite evidence, a finite
+expectation, and a finite nonnegative tolerance. Integers, including integer
+strings, compare exactly when the other side is an integer.
+
 ``verify_m_of_n`` checks the latest ``n`` prior verification results, excluding
-optional results unless ``include_optional=True``. It cannot undo required
-failures already recorded. For a trial-voting policy, mark each trial optional
+optional results unless ``include_optional=True``. From Shared 0.6.0, ``m`` and
+``n`` must be integers with ``0 < m <= n``; any other window is ERROR. It cannot
+undo required failures already recorded. For a trial-voting policy, mark each trial optional
 and make the final m-of-n check required. ``verify_all_passed`` excludes optional
 results by default and examines every earlier required result in the run.
 

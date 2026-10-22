@@ -9,6 +9,9 @@ from colosseum_shared.duration import parse_duration
 @pytest.mark.parametrize(
     ("value", "expected"),
     [
+        (0, 0.0),
+        (0.0, 0.0),
+        ("0", 0.0),
         (2, 2.0),
         (2.5, 2.5),
         ("30", 30.0),
@@ -35,6 +38,12 @@ def test_parse_duration_rejects_empty() -> None:
 def test_parse_duration_rejects_negative() -> None:
     with pytest.raises(ValueError, match="non-negative"):
         parse_duration(-1)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_parse_duration_rejects_nonfinite(value: float) -> None:
+    with pytest.raises(ValueError, match="finite"):
+        parse_duration(value)
 
 
 def test_parse_duration_rejects_garbage() -> None:

@@ -165,6 +165,18 @@ def test_verify_file_exists_missing_file(tmp_path: Path, monkeypatch: pytest.Mon
     assert result.status == "FAIL"
 
 
+def test_verify_file_exists_rejects_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    folder = ctx.output_dir / "data"
+    folder.mkdir(parents=True)
+    result = col.shared.verify.verify_file_exists(key="trace", path="data")
+    assert result.status == "FAIL"
+
+
 def test_verify_file_contents_count_and_invert(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -235,6 +247,113 @@ def test_verify_new_file_and_no_new_file(tmp_path: Path, monkeypatch: pytest.Mon
     assert appeared.status == "PASS"
 
 
+def test_recursive_snapshot_distinguishes_duplicate_basenames(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    captures = ctx.output_dir / "captures"
+    (captures / "a").mkdir(parents=True)
+    (captures / "note.txt").write_text("root", encoding="utf-8")
+    (captures / "a" / "result.txt").write_text("a", encoding="utf-8")
+
+    before = col.shared.verify.snapshot_files("captures", pattern="**/*.txt")
+    assert "a/result.txt" in before
+    assert "note.txt" in before
+    assert "result.txt" not in before
+
+    (captures / "b").mkdir()
+    (captures / "b" / "result.txt").write_text("b", encoding="utf-8")
+    quiet = col.shared.verify.verify_no_new_file(
+        key="quiet-nested",
+        directory="captures",
+        before=before,
+        pattern="**/*.txt",
+        settle_s=1.0,
+    )
+    assert quiet.status == "FAIL"
+    appeared = col.shared.verify.verify_new_file(
+        key="nested",
+        directory="captures",
+        before=before,
+        pattern="**/*.txt",
+        timeout_s=1.0,
+    )
+    assert appeared.status == "PASS"
+
+    same_before = col.shared.verify.snapshot_files("captures", pattern="*.txt")
+    assert same_before == {"note.txt"}
+    same_quiet = col.shared.verify.verify_no_new_file(
+        key="quiet-same",
+        directory="captures",
+        before=same_before,
+        pattern="*.txt",
+        settle_s=0,
+    )
+    assert same_quiet.status == "PASS"
+    (captures / "other.txt").write_text("o", encoding="utf-8")
+    same_new = col.shared.verify.verify_new_file(
+        key="same-dir",
+        directory="captures",
+        before=same_before,
+        pattern="*.txt",
+        timeout_s=1.0,
+    )
+    assert same_new.status == "PASS"
+
+
+def _reject_long_sleep(slept: list[float]) -> object:
+    def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+        if len(slept) > 4:
+            raise RuntimeError("stopped non-finite wait")
+
+    return fake_sleep
+
+
+@pytest.mark.parametrize("settle_s", [float("nan"), float("inf"), -1.0])
+def test_verify_no_new_file_rejects_bad_settle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, settle_s: float,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    captures = ctx.output_dir / "captures"
+    captures.mkdir()
+    (captures / "already.txt").write_text("x", encoding="utf-8")
+    before = col.shared.verify.snapshot_files("captures", pattern="*.txt")
+    slept: list[float] = []
+    monkeypatch.setattr("colosseum_shared.verify.files.time.sleep", _reject_long_sleep(slept))
+    result = col.shared.verify.verify_no_new_file(
+        key="quiet",
+        directory="captures",
+        before=before,
+        pattern="*.txt",
+        settle_s=settle_s,
+    )
+    assert result.status == "ERROR"
+    assert result.message is not None
+    assert "finite" in result.message
+    assert slept == []
+
+
+def test_wait_for_new_file_rejects_nonfinite_timing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    (ctx.output_dir / "captures").mkdir()
+    slept: list[float] = []
+    monkeypatch.setattr("colosseum_shared.verify.files.time.sleep", _reject_long_sleep(slept))
+    with pytest.raises(ValueError, match="finite"):
+        col.shared.verify.wait_for_new_file("captures", timeout_s=1.0, poll_s=float("inf"))
+    with pytest.raises(ValueError, match="finite"):
+        col.shared.verify.wait_for_new_file("captures", timeout_s=float("nan"), poll_s=0.25)
+    assert slept == []
+
+
 def test_verify_time_delta_pass(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _insert_measurement(key="power_on", timestamp="2026-01-01T00:00:00+00:00")
@@ -293,6 +412,42 @@ def test_verify_m_of_n_fail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     _fail_verify(key="c")
     result = col.shared.verify.verify_m_of_n(key="summary", m=2, n=3)
     assert result.status == "FAIL"
+
+
+def test_verify_m_of_n_exact_window(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    _pass_verify(key="only")
+    assert col.shared.verify.verify_m_of_n(key="summary", m=1, n=1).status == "PASS"
+
+
+@pytest.mark.parametrize(
+    ("m", "n", "passes"),
+    [
+        (-1, 0, 0),
+        (1, 0, 2),
+        (0, 3, 3),
+        (4, 3, 3),
+        (-1, 3, 3),
+        (2, -1, 2),
+        (1.5, 2, 2),
+        (True, 1, 1),
+    ],
+)
+def test_verify_m_of_n_rejects_invalid_window(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    m: object,
+    n: object,
+    passes: int,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    for index in range(passes):
+        _pass_verify(key=f"p{index}")
+    result = col.shared.verify.verify_m_of_n(key="summary", m=m, n=n)
+    assert result.status == "ERROR"
+    assert result.actual is None
+    assert result.message is not None
+    assert "0 < m <= n" in result.message
 
 
 def test_verify_match_uses_latest_measurement_by_key(
@@ -384,3 +539,88 @@ def test_verify_field_boolean(tmp_path, monkeypatch, actual, expected, status):
     result = col.shared.verify.verify_field(key="pin", field="level", expected_val=expected)
     assert result.status == status
     assert result.actual == actual
+
+
+# 2**53 is the last consecutive integer float can represent. The next integer
+# collapses to the same float, so these comparisons must stay on integers.
+_LARGE_INT = 9007199254740992
+_NEXT_LARGE_INT = 9007199254740993
+
+
+def test_verify_field_stores_prefixed_command_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    _record_text(key="version", value="v1.2.3")
+    col.shared.verify.verify_field(key="version", expected_val="v1.2.3")
+    stored = [
+        row for row in get_context().db.fetch_all_verifications() if row.key == "version"
+    ]
+    assert len(stored) == 1
+    assert stored[0].command == "verify.verify_field"
+
+
+def test_verify_field_large_integers_compare_exactly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="below", value=_LARGE_INT)
+    col.shared.measure_value(key="above", value=_NEXT_LARGE_INT)
+    col.shared.measure_value(key="above_text", value=str(_NEXT_LARGE_INT))
+    col.shared.measure_value(key="mixed", value="10.5")
+
+    assert col.shared.verify.verify_field(
+        key="below", expected_val=_NEXT_LARGE_INT, tolerance=0,
+    ).status == "FAIL"
+    assert col.shared.verify.verify_field(
+        key="above", expected_val=_LARGE_INT, tolerance=0,
+    ).status == "FAIL"
+    assert col.shared.verify.verify_field(
+        key="above", expected_val=_NEXT_LARGE_INT, tolerance=0,
+    ).status == "PASS"
+    assert col.shared.verify.verify_field(
+        key="above_text", expected_val=_LARGE_INT, tolerance=0,
+    ).status == "FAIL"
+    assert col.shared.verify.verify_field(
+        key="above_text", expected_val=_NEXT_LARGE_INT, tolerance=0,
+    ).status == "PASS"
+    assert col.shared.verify.verify_field(key="above", maximum=_LARGE_INT).status == "FAIL"
+    assert col.shared.verify.verify_field(key="below", minimum=_NEXT_LARGE_INT).status == "FAIL"
+    assert col.shared.verify.verify_field(key="below", maximum=_LARGE_INT).status == "PASS"
+    assert col.shared.verify.verify_field(key="above", minimum=_NEXT_LARGE_INT).status == "PASS"
+    assert col.shared.verify.verify_field(key="above", maximum=_NEXT_LARGE_INT).status == "PASS"
+    assert col.shared.verify.verify_field(key="below", minimum=_LARGE_INT).status == "PASS"
+    assert col.shared.verify.verify_field(key="above_text", maximum=_LARGE_INT).status == "FAIL"
+    assert col.shared.verify.verify_field(
+        key="mixed", expected_val=10, tolerance=0.5,
+    ).status == "PASS"
+    assert col.shared.verify.verify_field(
+        key="mixed", expected_val=10, tolerance=0,
+    ).status == "FAIL"
+
+
+@pytest.mark.parametrize(
+    ("actual", "expected", "tolerance"),
+    [
+        (float("inf"), 0, 0.0),
+        (float("nan"), 0, 0.0),
+        (1.0, 0, float("inf")),
+        (1.0, 0, float("nan")),
+        (1.0, 0, -1.0),
+        (1.0, float("inf"), 0.0),
+        (1.0, float("nan"), 0.0),
+    ],
+)
+def test_verify_field_rejects_invalid_numeric_comparison(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    actual: object,
+    expected: object,
+    tolerance: float,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="n", value=actual)
+    result = col.shared.verify.verify_field(
+        key="n", expected_val=expected, tolerance=tolerance,
+    )
+    assert result.status == "ERROR"

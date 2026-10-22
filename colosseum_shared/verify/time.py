@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from math import isfinite
 
 from colosseum.decorators import (
     VerificationResult,
@@ -18,6 +19,7 @@ _logger = get_logger("colosseum.shared")
 
 
 @verification
+@with_verify_command("verify_time_delta")
 def verify_time_delta(
     *,
     key: str,
@@ -79,10 +81,8 @@ def verify_time_delta(
     )
 
 
-verify_time_delta = with_verify_command(verify_time_delta, "verify_time_delta")
-
-
 @verification
+@with_verify_command("verify_elapsed")
 def verify_elapsed(
     *,
     key: str,
@@ -95,13 +95,15 @@ def verify_elapsed(
     Uses ``time.perf_counter()`` values stored by ``col.shared.measure_mark``, not
     database row timestamps (see ``verify_time_delta`` for those). Use a mark
     from the current timing session; imported values from another run or
-    machine are not portable elapsed-time evidence.
+    machine are not portable elapsed-time evidence. The stored mark must be
+    finite. ``maximum_s`` must be finite and nonnegative; zero is allowed.
+    A non-finite mark or limit is ERROR and is not compared.
 
     :param key: Verification evidence key.
     :type key: str
     :param mark_key: Measurement key from a prior ``measure_mark``.
     :type mark_key: str
-    :param maximum_s: Maximum allowed elapsed seconds.
+    :param maximum_s: Maximum allowed elapsed seconds. Finite and nonnegative.
     :type maximum_s: float
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
@@ -110,6 +112,12 @@ def verify_elapsed(
     :rtype: VerificationResult
     """
     _ = key
+    if not isfinite(maximum_s) or maximum_s < 0:
+        return VerificationResult(
+            status="ERROR",
+            message=f"maximum_s must be finite and nonnegative, got {maximum_s!r}",
+            optional=optional,
+        )
     row = latest_measurement_by_key(mark_key)
     if row is None or row.value is None:
         return missing_measurement_result(key=mark_key, optional=optional)
@@ -119,6 +127,13 @@ def verify_elapsed(
         return VerificationResult(
             status="ERROR",
             message=f"mark measurement {mark_key!r} is not numeric",
+            optional=optional,
+            actual=row.value,
+        )
+    if not isfinite(mark):
+        return VerificationResult(
+            status="ERROR",
+            message=f"mark measurement {mark_key!r} must be finite, got {mark!r}",
             optional=optional,
             actual=row.value,
         )
@@ -137,6 +152,3 @@ def verify_elapsed(
         optional=optional,
         actual=elapsed,
     )
-
-
-verify_elapsed = with_verify_command(verify_elapsed, "verify_elapsed")

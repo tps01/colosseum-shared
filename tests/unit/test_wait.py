@@ -46,3 +46,23 @@ def test_wait_progress_bar_ticks(
     out = capsys.readouterr().out
     assert "[" in out
     assert "0.3s" in out
+
+
+def test_wait_rejects_nonfinite(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load(tmp_path, monkeypatch)
+    slept: list[float] = []
+
+    def fake_sleep(seconds: float) -> None:
+        slept.append(seconds)
+        if len(slept) > 4:
+            raise RuntimeError("stopped non-finite wait")
+
+    monkeypatch.setattr("colosseum_shared.wait.time.sleep", fake_sleep)
+    for duration in (float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError, match="finite"):
+            col.shared.wait(duration=duration)
+    with pytest.raises(ValueError, match="finite"):
+        col.shared.wait(duration=float("inf"), progress_bar=True)
+    assert slept == []

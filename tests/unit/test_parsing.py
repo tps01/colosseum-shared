@@ -10,6 +10,27 @@ def test_parse_float_extracts_first_number() -> None:
     assert parse_float("gain = 12.5 dB") == pytest.approx(12.5)
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("rail=1.e3 V", 1000.0),
+        ("1.E+3", 1000.0),
+        ("1.e-3", 0.001),
+        ("1E3", 1000.0),
+        ("1e-2", 0.01),
+        (".5 V", 0.5),
+        (".5e1", 5.0),
+        ("x=-.25e+1 y", -2.5),
+        ("1.", 1.0),
+        ("+2.5e1", 25.0),
+        ("2.5e-1 units", 0.25),
+        ("pre 1.2.3 post", 1.2),
+    ],
+)
+def test_parse_float_complete_numeric_tokens(text: str, expected: float) -> None:
+    assert parse_float(text) == pytest.approx(expected)
+
+
 def test_parse_float_raises_when_absent() -> None:
     with pytest.raises(ValueError, match="No numeric value"):
         parse_float("no numbers here")
