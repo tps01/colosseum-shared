@@ -34,6 +34,7 @@ API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
     ('measure_value', 'colosseum_shared.measure.measure_value', 'col.shared.measure_value'),
     ('measure_env', 'colosseum_shared.measure.measure_env', 'col.shared.measure_env'),
     ('measure_mark', 'colosseum_shared.measure.measure_mark', 'col.shared.measure_mark'),
+    ('comment', 'colosseum_shared.prompt.api.comment', 'col.shared.comment'),
 )
 GUIDES: tuple[str, ...] = (
     "docs/sphinx/source/guides/getting_started.rst",
