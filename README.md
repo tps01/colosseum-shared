@@ -37,6 +37,7 @@ through the `colosseum.plugins` entry point.
 | Regex on measurement | `regex.verify_match` |
 | File exists / contents | `verify.verify_file_*` |
 | Intentional PASS/FAIL | `verify.verify_pass` / `verify.verify_fail` |
+| Annotate the run | `col.shared.comment(message=…)` |
 | Operator input | `prompt.*` (needs interactive stdin / TTY) |
 | Parse floats / KV | `col.shared.parsing.*` (undecorated helpers, not evidence) |
 
