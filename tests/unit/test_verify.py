@@ -624,3 +624,60 @@ def test_verify_field_rejects_invalid_numeric_comparison(
         key="n", expected_val=expected, tolerance=tolerance,
     )
     assert result.status == "ERROR"
+
+
+def test_verify_field_percent_tolerance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="n", value=110)
+    assert col.shared.verify.verify_field(
+        key="n", expected_val=100, tolerance_pct=10,
+    ).status == "PASS"
+    assert col.shared.verify.verify_field(
+        key="n", expected_val=100, tolerance_pct=5,
+    ).status == "FAIL"
+    both = col.shared.verify.verify_field(
+        key="n", expected_val=100, tolerance=1, tolerance_pct=10,
+    )
+    assert both.status == "ERROR"
+
+
+def test_verify_equal_and_verify_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    col.shared.measure_value(key="left", value=3)
+    col.shared.measure_value(key="right", value=3)
+    col.shared.measure_value(key="color", value="red")
+    assert col.shared.verify.verify_equal(key="left", other_key="right").status == "PASS"
+    assert col.shared.verify.verify_equal(key="left", other_key="color").status == "FAIL"
+    assert col.shared.verify.verify_in(key="color", choices=("red", "blue")).status == "PASS"
+    assert col.shared.verify.verify_in(key="color", choices=("green",)).status == "FAIL"
+    assert col.shared.verify.verify_in(key="color", choices=()).status == "ERROR"
+
+
+def test_verify_file_absent_and_file_measurements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    missing = col.shared.verify.verify_file_absent(key="gone", path="missing.txt")
+    assert missing.status == "PASS"
+    note = ctx.output_dir / "note.txt"
+    note.write_text("hello\n", encoding="utf-8")
+    assert col.shared.verify.verify_file_absent(key="present", path="note.txt").status == "FAIL"
+    assert col.shared.measure_file_text(key="body", path="note.txt") == "hello\n"
+    digest = col.shared.measure_file_sha256(key="hash", path="note.txt")
+    assert len(digest) == 64
+
+
+def test_wait_for_log_line(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    ctx = get_context()
+    assert ctx.output_dir is not None
+    log = ctx.output_dir / "boot.log"
+    log.write_text("booting\nready\n", encoding="utf-8")
+    assert col.shared.verify.wait_for_log_line(
+        "boot.log", pattern=r"ready", timeout_s=0,
+    ) == "ready"
+    assert col.shared.verify.wait_for_log_line(
+        "boot.log", pattern=r"fatal", timeout_s=0,
+    ) is None

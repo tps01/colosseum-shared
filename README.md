@@ -32,7 +32,8 @@ through the `colosseum.plugins` entry point.
 | Sleep | `col.shared.wait(duration=…)` |
 | Record a literal | `col.shared.measure_value(key=…, value=…)` |
 | Record env var | `col.shared.measure_env(key=…, name=…)` + `verify.verify_env` |
-| Wall-clock budget | `measure_mark` + `verify.verify_elapsed` |
+| Monotonic elapsed budget | `measure_mark` + `verify.verify_elapsed` |
+| Bench UTC time vs a log timestamp | `measure_wall_time` + `verify.verify_wall_time_delta` |
 | Equal / ±tolerance | `verify.verify_field` |
 | Regex on measurement | `regex.verify_match` |
 | File exists / contents | `verify.verify_file_*` |
@@ -94,6 +95,18 @@ pytest
 ruff check .
 mypy
 ```
+
+### Wall time and operator checks (0.7.0+)
+
+`measure_mark` / `verify_elapsed` stay on the monotonic perf counter.
+`measure_wall_time` records UTC ISO-8601 wall time.
+`verify_wall_time_delta` compares that value with another measurement or with
+an `expected` timestamp string.
+
+Prompts accept `timeout_s` and return after recording ERROR instead of hanging.
+`prompt_choice` records a closed set of answers as a normal verification.
+`verify.wait_for_log_line` polls a file until a regex matches.
+`run_process` runs a local program and records stdout plus the exit code.
 
 ### Inclusive numeric bounds (0.5.0+)
 

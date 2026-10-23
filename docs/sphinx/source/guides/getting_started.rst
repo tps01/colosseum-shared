@@ -26,6 +26,7 @@ An empty or comment-only file is enough when you only call ``col.shared.*``::
        col.shared.verify.verify_field(key="uut_version", expected_val="v1.2.3")
        col.shared.measure_mark(key="t0")
        col.shared.verify.verify_elapsed(key="budget", mark_key="t0", maximum_s=30.0)
+       col.shared.measure_wall_time(key="started_at")
 
 Other common verifies: ``verify_file_exists``, ``verify_new_file``,
 ``verify_pass`` / ``verify_fail``, ``col.shared.comment`` (also

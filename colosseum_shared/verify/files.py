@@ -77,6 +77,56 @@ def verify_file_exists(
 
 
 @verification
+@with_verify_command("verify_file_absent")
+def verify_file_absent(
+    *,
+    key: str,
+    path: str | None = None,
+    optional: bool = False,
+) -> VerificationResult:
+    """PASS when ``path`` is not an existing regular file.
+
+    A missing path passes. A directory passes because it is not a regular file.
+
+    :param key: Verification evidence key (and measurement key when ``path`` is omitted).
+    :type key: str
+    :param path: Relative path under the run output directory, or an absolute path.
+    :type path: str | None, optional
+    :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
+    :type optional: bool, optional
+
+    :returns: VerificationResult with PASS, FAIL, or ERROR status.
+    :rtype: VerificationResult
+    """
+    file_path = path
+    if file_path is None:
+        row = latest_measurement_by_key(key)
+        if row is None or row.value is None:
+            return missing_measurement_result(key=key, optional=optional)
+        file_path = str(row.value)
+    if not file_path:
+        return VerificationResult(
+            status="ERROR",
+            message="no path provided and measurement value is empty",
+            optional=optional,
+        )
+    resolved = resolve_path(file_path)
+    if resolved.is_file():
+        return VerificationResult(
+            status="FAIL",
+            message=f"file exists: {resolved}",
+            optional=optional,
+            actual=str(resolved),
+        )
+    return VerificationResult(
+        status="PASS",
+        message="",
+        optional=optional,
+        actual=str(resolved),
+    )
+
+
+@verification
 @with_verify_command("verify_file_contents")
 def verify_file_contents(
     *,
@@ -213,6 +263,41 @@ def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
     return {
         _relative_file_id(root, path) for path in root.glob(pattern) if path.is_file()
     }
+
+
+def wait_for_log_line(
+    path: str,
+    *,
+    pattern: str,
+    timeout_s: float = 10.0,
+    poll_s: float = 0.25,
+) -> str | None:
+    """Poll ``path`` until ``pattern`` matches, or return ``None`` at ``timeout_s``.
+
+    The file may be missing at the start. Each look reads the current UTF-8 text
+    and replaces invalid bytes. ``timeout_s`` of zero looks once. This does not
+    judge a finished file; use ``verify_file_contents`` for that.
+
+    :param path: Absolute path, or relative to the run output directory.
+    :param pattern: Regular expression searched in the file text.
+    :param timeout_s: How long to poll. Finite and nonnegative.
+    :param poll_s: Delay between looks. Finite and nonnegative.
+    :returns: The matched text, or ``None`` when the wait expires.
+    """
+    _require_nonnegative_finite("timeout_s", timeout_s)
+    _require_nonnegative_finite("poll_s", poll_s)
+    compiled = re.compile(pattern)
+    resolved = resolve_path(path)
+    deadline = time.monotonic() + timeout_s
+    while True:
+        if resolved.is_file():
+            text = resolved.read_text(encoding="utf-8", errors="replace")
+            match = compiled.search(text)
+            if match is not None:
+                return match.group(0)
+        if time.monotonic() >= deadline:
+            return None
+        time.sleep(poll_s)
 
 
 def wait_for_new_file(

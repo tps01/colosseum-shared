@@ -82,6 +82,30 @@ def test_verify_elapsed_rejects_nonfinite_mark_or_limit(
     assert result.actual != float("-inf")
 
 
+def test_measure_wall_time_delta(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    stamp = col.shared.measure_wall_time(key="now")
+    assert "T" in stamp
+    col.shared.measure_value(key="log_time", value="2020-01-01T00:00:00+00:00")
+    col.shared.measure_value(key="bench_time", value="2020-01-01T00:00:02+00:00")
+    assert col.shared.verify.verify_wall_time_delta(
+        key="bench_time", other_key="log_time", tolerance_s=3,
+    ).status == "PASS"
+    assert col.shared.verify.verify_wall_time_delta(
+        key="bench_time", other_key="log_time", tolerance_s=0,
+    ).status == "FAIL"
+    assert col.shared.verify.verify_wall_time_delta(
+        key="bench_time", expected="2020-01-01T00:00:02+00:00", tolerance_s=0,
+    ).status == "PASS"
+    assert col.shared.verify.verify_wall_time_delta(
+        key="bench_time", tolerance_s=1,
+    ).status == "ERROR"
+    col.shared.measure_value(key="bad_time", value="not-a-time")
+    assert col.shared.verify.verify_wall_time_delta(
+        key="bad_time", expected="2020-01-01T00:00:00+00:00", tolerance_s=1,
+    ).status == "ERROR"
+
+
 def test_verify_pass_and_fail_markers(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
