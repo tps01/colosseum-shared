@@ -82,11 +82,13 @@ def _posix_key(timeout_s: float | None) -> bool:
 def _windows_line(timeout_s: float) -> str | None:
     import msvcrt
 
+    kbhit = getattr(msvcrt, "kbhit")
+    getwch = getattr(msvcrt, "getwch")
     deadline = time.monotonic() + timeout_s
     chars: list[str] = []
     while True:
-        if msvcrt.kbhit():
-            char = msvcrt.getwch()
+        if kbhit():
+            char = getwch()
             if char in ("\r", "\n"):
                 print(flush=True)
                 return "".join(chars)
@@ -105,13 +107,15 @@ def _windows_line(timeout_s: float) -> str | None:
 def _windows_key(timeout_s: float | None) -> bool:
     import msvcrt
 
+    getch = getattr(msvcrt, "getch")
+    kbhit = getattr(msvcrt, "kbhit")
     if timeout_s is None:
-        msvcrt.getch()
+        getch()
         return True
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        if msvcrt.kbhit():
-            msvcrt.getch()
+        if kbhit():
+            getch()
             return True
         time.sleep(0.02)
     return False
