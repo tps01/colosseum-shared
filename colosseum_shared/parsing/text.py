@@ -6,6 +6,11 @@ from colosseum.logging import get_logger
 
 _logger = get_logger("colosseum.shared")
 
+# Exponent form is first so a trailing decimal (`1.e3`) is not truncated to `1`.
+_NUMBER_RE = re.compile(
+    r"[-+]?(?:(?:\d+\.\d*|\.\d+|\d+)[eE][-+]?\d+|\d+\.\d*|\.\d+|\d+)",
+)
+
 
 def strip_response(text: str) -> str:
     """Strip leading and trailing whitespace from instrument response text.
@@ -30,7 +35,7 @@ def parse_float(text: str) -> float:
 
     :raises ValueError: When no numeric token is found.
     """
-    match = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", text)
+    match = _NUMBER_RE.search(text)
     if not match:
         raise ValueError(f"No numeric value in response: {text!r}")
     value = float(match.group(0))

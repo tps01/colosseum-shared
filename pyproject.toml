@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "colosseum-shared"
-version = "0.5.1"
+version = "0.7.1"
 description = "Colosseum shared utilities plugin (verify, wait, measure, regex, parsing, prompts)"
 requires-python = ">=3.9"
 license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
-  "colosseum-core>=0.17.0,<0.18",
+  "colosseum-core>=0.17.8,<0.18",
   "pytest>=8.0",
   "bandit[toml]>=1.7",
   "vulture>=2.11",
@@ -68,6 +68,7 @@ module = [
   "colosseum_shared.verify.time",
   "colosseum_shared.regex.api",
   "colosseum_shared.prompt.api",
+  "colosseum_shared.process",
 ]
 disallow_untyped_decorators = false
 

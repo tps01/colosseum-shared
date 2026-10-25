@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import time
+from datetime import datetime, timezone
 
 from colosseum.decorators import measurement
 from colosseum.logging import get_logger
+
+from colosseum_shared._evidence import resolve_path
 
 _logger = get_logger("colosseum.shared")
 
@@ -54,6 +58,10 @@ def measure_env(*, key: str, name: str) -> str:
 def measure_mark(*, key: str) -> float:
     """Record ``time.perf_counter()`` for later ``verify_elapsed``.
 
+    This is a monotonic elapsed mark for the current process. It is not a wall
+    time, and it is not comparable across runs or machines. Use
+    ``measure_wall_time`` when the procedure needs a UTC clock reading.
+
     :param key: Unique measurement key within domain ``shared``.
     :type key: str
 
@@ -64,3 +72,62 @@ def measure_mark(*, key: str) -> float:
     mark = time.perf_counter()
     _logger.debug("measure_mark key=%s mark=%s", key, mark)
     return mark
+
+
+@measurement
+def measure_wall_time(*, key: str) -> str:
+    """Record the current UTC time as an ISO-8601 string.
+
+    The value is the bench wall clock (``datetime.now(timezone.utc)``), the same
+    kind of timestamp core stores on evidence rows. A clock step can move it.
+    It is the reading a procedure prints or compares to a product log. It is not
+    a monotonic elapsed budget; use ``measure_mark`` and ``verify_elapsed`` for that.
+
+    :param key: Unique measurement key within domain ``shared``.
+    :type key: str
+
+    :returns: Timezone-aware UTC timestamp.
+    :rtype: str
+    """
+    _ = key
+    stamp = datetime.now(timezone.utc).isoformat()
+    _logger.debug("measure_wall_time key=%s stamp=%s", key, stamp)
+    return stamp
+
+
+@measurement
+def measure_file_text(*, key: str, path: str) -> str:
+    """Record a UTF-8 text file as a measurement.
+
+    :param key: Unique measurement key within domain ``shared``.
+    :type key: str
+    :param path: Absolute path, or relative to the run output directory.
+    :type path: str
+
+    :returns: File text.
+    :rtype: str
+
+    :raises UnicodeDecodeError: When the file is not valid UTF-8.
+    """
+    _ = key
+    text = resolve_path(path).read_text(encoding="utf-8")
+    _logger.debug("measure_file_text key=%s path=%s bytes=%s", key, path, len(text))
+    return text
+
+
+@measurement
+def measure_file_sha256(*, key: str, path: str) -> str:
+    """Record the SHA-256 hex digest of a file.
+
+    :param key: Unique measurement key within domain ``shared``.
+    :type key: str
+    :param path: Absolute path, or relative to the run output directory.
+    :type path: str
+
+    :returns: Lowercase hex digest.
+    :rtype: str
+    """
+    _ = key
+    digest = hashlib.sha256(resolve_path(path).read_bytes()).hexdigest()
+    _logger.debug("measure_file_sha256 key=%s path=%s", key, path)
+    return digest

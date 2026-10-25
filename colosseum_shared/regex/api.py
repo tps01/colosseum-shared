@@ -19,14 +19,19 @@ def verify_match(
     *,
     key: str,
     pattern: str,
+    invert: bool = False,
     optional: bool = False,
 ) -> VerificationResult:
     """Verify a regex matches text from a prior measurement.
+
+    ``invert=True`` passes when the pattern is absent.
 
     :param key: Measurement key shared with the source measurement.
     :type key: str
     :param pattern: Regular expression searched in the measured text.
     :type pattern: str
+    :param invert: Pass when the pattern does not match.
+    :type invert: bool, optional
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
 
@@ -39,12 +44,19 @@ def verify_match(
         return missing_measurement_result(key=key, optional=optional)
     actual = str(row.value)
     matched = re.search(pattern, actual) is not None
-    _logger.debug("verify_match key=%s pattern=%r matched=%s", key, pattern, matched)
-    if matched:
+    passed = (not matched) if invert else matched
+    _logger.debug(
+        "verify_match key=%s pattern=%r invert=%s matched=%s", key, pattern, invert, matched,
+    )
+    if passed:
         return VerificationResult(status="PASS", message="", optional=optional, actual=actual)
+    if invert:
+        message = f"pattern {pattern!r} unexpectedly found in {actual!r}"
+    else:
+        message = f"pattern {pattern!r} not found in {actual!r}"
     return VerificationResult(
         status="FAIL",
-        message=f"pattern {pattern!r} not found in {actual!r}",
+        message=message,
         optional=optional,
         actual=actual,
     )

@@ -19,7 +19,8 @@ Baseline expectations for AI agents in this plugin repository.
   re-exported from `verify/api.py`. Keep command IDs as `verify.*` via
   `__colosseum_command__`.
 - `colosseum_shared/measure.py`: one-off `measure_value` / `measure_env` /
-  `measure_mark` (parallel to `wait.py`).
+  `measure_mark` / `measure_wall_time` (parallel to `wait.py`).
+  `measure_mark` is monotonic. `measure_wall_time` is UTC wall time.
 - Do not add `col.shared.signal` here without an explicit product request (RF
   library TDD is a separate roadmap).
 
@@ -27,6 +28,16 @@ Baseline expectations for AI agents in this plugin repository.
 
 Prefer focused, compact changes. Do not commit unless asked. Read `RULES.md` at
 task start.
+
+One config row uses `[dotted.path]`. Use `[[dotted.path]]` only when the sample
+shows multiple rows of that same section. Do not use array-of-tables syntax as
+the default for a single instrument, profile, or service.
+
+When a test fails, reproduce the bug before fixing it. Understand why it is
+failing before addressing it. Do not adjust tests purely to obtain passing
+results. Write the least code that works, and spend the effort to reach that;
+it is more effective in the long run. When possible, substantiate claims with
+evidence such as plots, tracebacks, or links.
 
 ## Footprint
 

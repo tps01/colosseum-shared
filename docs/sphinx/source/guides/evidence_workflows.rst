@@ -34,20 +34,39 @@ Do not combine bounds with ``expected_val`` / ``tolerance``. Invalid or non-fini
 bounds/evidence produce ERROR. Boolean expectations require actual Boolean
 evidence; integers and strings do not stand in for ``True`` / ``False``.
 
+Shared 0.6.0 requires numeric expectations to use finite evidence, a finite
+expectation, and a finite nonnegative tolerance. Integers, including integer
+strings, compare exactly when the other side is an integer.
+
 ``verify_m_of_n`` checks the latest ``n`` prior verification results, excluding
-optional results unless ``include_optional=True``. It cannot undo required
-failures already recorded. For a trial-voting policy, mark each trial optional
+optional results unless ``include_optional=True``. From Shared 0.6.0, ``m`` and
+``n`` must be integers with ``0 < m <= n``; any other window is ERROR. It cannot
+undo required failures already recorded. For a trial-voting policy, mark each trial optional
 and make the final m-of-n check required. ``verify_all_passed`` excludes optional
 results by default and examines every earlier required result in the run.
 
 Time and replay
 ---------------
 
-``measure_mark`` stores a performance-counter value. Use ``verify_elapsed`` only
-within the current timing session. ``verify_time_delta`` instead compares the
-stored measurement timestamps, so it can work with imported rows. Filesystem
-checks need the actual files, not just their prior measurement rows. The portable
-example recreates temporary files when run; it is not a file-replay fixture.
+``measure_mark`` stores ``time.perf_counter()``, a monotonic elapsed mark for
+this process. ``verify_elapsed`` subtracts a later perf-counter reading from
+that mark. The mark does not move backward when the wall clock steps, and it
+is meaningless in another run or on another machine. Use it only inside the
+current timing session.
+
+``verify_time_delta`` uses the UTC timestamps core writes on evidence rows, so
+it can replay imported rows. A clock step can shrink or stretch that delta.
+
+``measure_wall_time`` stores the bench UTC time as an ISO-8601 string in the
+measurement value. ``verify_wall_time_delta`` subtracts two such strings (a
+second measurement, or an ``expected`` literal such as a timestamp copied from
+a product log) and passes when the absolute difference is within
+``tolerance_s``. That pair is how a log line meets the bench clock. It is not
+an elapsed budget.
+
+Filesystem checks need the actual files, not just their prior measurement rows.
+The portable example recreates temporary files when run; it is not a file-replay
+fixture.
 
 Field/regex comparisons against stored values are suitable for verification-only
 replay. Core's runtime execution guide includes a plugin-free numeric/text replay

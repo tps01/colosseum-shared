@@ -94,6 +94,67 @@ def test_prompt_exit_mismatch_exits(
     assert exc_info.value.code == 1
 
 
+def test_prompt_timeout_returns_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(prompt_api, "wait_any_key", lambda *, message, timeout_s: False)
+    result = prompt_api.prompt(message="LED green?", timeout_s=0.1)
+    assert result is not None
+    assert result.status == "ERROR"
+
+
+def test_prompt_measurement_timeout_returns_none(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        prompt_api, "read_line", lambda *, message, timeout_s=None: None,
+    )
+    assert prompt_api.prompt_measurement(
+        message="Serial: ", key="serial", timeout_s=0.1,
+    ) is None
+    row = get_context().db.get_measurement(
+        "shared", _PROMPT_MEASUREMENT_COMMAND, "serial", row_index=0,
+    )
+    assert row is not None
+    assert row.status == "ERROR"
+
+
+def test_prompt_choice_records_answer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(prompt_api, "read_line", lambda *, message, timeout_s=None: "PASS")
+    result = prompt_api.prompt_choice(
+        message="Result: ", key="verdict", choices=("PASS", "FAIL"),
+    )
+    assert result.status == "PASS"
+    monkeypatch.setattr(prompt_api, "read_line", lambda *, message, timeout_s=None: "MAYBE")
+    failed = prompt_api.prompt_choice(
+        message="Result: ", key="verdict2", choices=("PASS", "FAIL"),
+    )
+    assert failed.status == "FAIL"
+
+
+def test_prompt_exit_timeout_does_not_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        prompt_api, "read_line", lambda *, message, timeout_s=None: None,
+    )
+    result = prompt_api.prompt_exit(
+        message="Type PASS: ", key="ack", expected="PASS", timeout_s=0.1,
+    )
+    assert result is not None
+    assert result.status == "ERROR"
+
+
 def test_prompt_namespace_via_col(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

@@ -30,3 +30,9 @@ def test_verify_match_finds_measurement_by_key(
     _record_text(key="marker", value="second")
     result = col.shared.regex.verify_match(key="marker", pattern=r"^second$")
     assert result.status == "PASS"
+    assert col.shared.regex.verify_match(
+        key="marker", pattern=r"second", invert=True,
+    ).status == "FAIL"
+    assert col.shared.regex.verify_match(
+        key="marker", pattern=r"absent", invert=True,
+    ).status == "PASS"
