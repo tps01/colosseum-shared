@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import time
-from math import isfinite
 from typing import TYPE_CHECKING
 
 from colosseum.decorators import (
@@ -15,6 +14,7 @@ from colosseum.decorators import (
 from colosseum.logging import get_logger
 
 from colosseum_shared._evidence import latest_measurement_by_key, resolve_path
+from colosseum_shared.duration import parse_duration
 from colosseum_shared.verify._command import with_verify_command
 
 if TYPE_CHECKING:
@@ -238,13 +238,14 @@ def _relative_file_id(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
 
 
-def _require_nonnegative_finite(label: str, value: float) -> None:
+def _require_nonnegative_finite(label: str, value: float | int | str) -> float:
+    """Return seconds. Numbers are seconds; strings may use duration suffixes (``61s``)."""
     try:
-        number = float(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{label} must be a finite nonnegative number, got {value!r}") from exc
-    if not isfinite(number) or number < 0:
-        raise ValueError(f"{label} must be a finite nonnegative number, got {value!r}")
+        return parse_duration(value)
+    except ValueError as exc:
+        raise ValueError(
+            f"{label} must be a finite nonnegative duration, got {value!r}",
+        ) from exc
 
 
 def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
@@ -269,8 +270,8 @@ def wait_for_log_line(
     path: str,
     *,
     pattern: str,
-    timeout_s: float = 10.0,
-    poll_s: float = 0.25,
+    timeout_s: float | int | str = 10.0,
+    poll_s: float | int | str = 0.25,
 ) -> str | None:
     """Poll ``path`` until ``pattern`` matches, or return ``None`` at ``timeout_s``.
 
@@ -280,12 +281,13 @@ def wait_for_log_line(
 
     :param path: Absolute path, or relative to the run output directory.
     :param pattern: Regular expression searched in the file text.
-    :param timeout_s: How long to poll. Finite and nonnegative.
-    :param poll_s: Delay between looks. Finite and nonnegative.
+    :param timeout_s: How long to poll. A number is seconds; a string may use
+        duration suffixes (``500ms``, ``61s``). Finite and nonnegative.
+    :param poll_s: Delay between looks. Same duration forms as ``timeout_s``.
     :returns: The matched text, or ``None`` when the wait expires.
     """
-    _require_nonnegative_finite("timeout_s", timeout_s)
-    _require_nonnegative_finite("poll_s", poll_s)
+    timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
+    poll_s = _require_nonnegative_finite("poll_s", poll_s)
     compiled = re.compile(pattern)
     resolved = resolve_path(path)
     deadline = time.monotonic() + timeout_s
@@ -305,18 +307,19 @@ def wait_for_new_file(
     *,
     before: set[str] | None = None,
     pattern: str = "*",
-    timeout_s: float = 10.0,
-    poll_s: float = 0.25,
+    timeout_s: float | int | str = 10.0,
+    poll_s: float | int | str = 0.25,
 ) -> Path | None:
     """Poll until a new file matching ``pattern`` appears; return its path or ``None``.
 
     ``before`` is typically ``snapshot_files(...)`` taken before the action under test.
     Entries are paths relative to ``directory``. When omitted, an empty set is used
-    (any matching file counts as new). ``timeout_s`` and ``poll_s`` must be finite
-    and nonnegative; zero timeout returns without waiting.
+    (any matching file counts as new). ``timeout_s`` and ``poll_s`` are seconds, or
+    duration strings such as ``500ms`` or ``61s``. Both must be finite and
+    nonnegative; zero timeout returns without waiting.
     """
-    _require_nonnegative_finite("timeout_s", timeout_s)
-    _require_nonnegative_finite("poll_s", poll_s)
+    timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
+    poll_s = _require_nonnegative_finite("poll_s", poll_s)
     root = resolve_path(directory)
     seen = set() if before is None else set(before)
     deadline = time.monotonic() + timeout_s
@@ -337,7 +340,7 @@ def verify_new_file(
     directory: str,
     before: set[str] | None = None,
     pattern: str = "*",
-    timeout_s: float = 10.0,
+    timeout_s: float | int | str = 10.0,
     optional: bool = False,
 ) -> VerificationResult:
     """PASS when a new file matching ``pattern`` appears under ``directory``.
@@ -346,10 +349,12 @@ def verify_new_file(
     :param directory: Absolute directory, or relative to the run output directory.
     :param before: Relative paths from ``snapshot_files`` before the triggering action.
     :param pattern: Glob relative to ``directory``.
-    :param timeout_s: How long to wait for a new match. Finite and nonnegative.
+    :param timeout_s: How long to wait for a new match. A number is seconds; a
+        string may use duration suffixes (``500ms``, ``61s``). Finite and nonnegative.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
     """
     _ = key
+    timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
     found = wait_for_new_file(
         directory,
         before=before,
@@ -379,7 +384,7 @@ def verify_no_new_file(
     directory: str,
     before: set[str] | None = None,
     pattern: str = "*",
-    settle_s: float = 2.0,
+    settle_s: float | int | str = 2.0,
     optional: bool = False,
 ) -> VerificationResult:
     """PASS when no new file matching ``pattern`` appears during ``settle_s``.
@@ -388,12 +393,13 @@ def verify_no_new_file(
     :param directory: Absolute directory, or relative to the run output directory.
     :param before: Relative paths from ``snapshot_files`` before the quiet period.
     :param pattern: Glob relative to ``directory``.
-    :param settle_s: How long the directory must stay quiet. Finite and nonnegative;
-        zero returns immediately.
+    :param settle_s: How long the directory must stay quiet. A number is seconds;
+        a string may use duration suffixes (``500ms``, ``61s``). Finite and
+        nonnegative; zero returns immediately.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
     """
     _ = key
-    _require_nonnegative_finite("settle_s", settle_s)
+    settle_s = _require_nonnegative_finite("settle_s", settle_s)
     found = wait_for_new_file(
         directory,
         before=before,
