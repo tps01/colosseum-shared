@@ -85,8 +85,8 @@ def _windows_line(timeout_s: float) -> str | None:
     deadline = time.monotonic() + timeout_s
     chars: list[str] = []
     while True:
-        if msvcrt.kbhit():
-            char = msvcrt.getwch()
+        if msvcrt.kbhit():  # type: ignore[attr-defined]
+            char = msvcrt.getwch()  # type: ignore[attr-defined]
             if char in ("\r", "\n"):
                 print(flush=True)
                 return "".join(chars)
@@ -106,12 +106,12 @@ def _windows_key(timeout_s: float | None) -> bool:
     import msvcrt
 
     if timeout_s is None:
-        msvcrt.getch()
+        msvcrt.getch()  # type: ignore[attr-defined]
         return True
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
-        if msvcrt.kbhit():
-            msvcrt.getch()
+        if msvcrt.kbhit():  # type: ignore[attr-defined]
+            msvcrt.getch()  # type: ignore[attr-defined]
             return True
         time.sleep(0.02)
     return False
