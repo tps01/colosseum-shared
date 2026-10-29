@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build GitHub Pages HTML for a Colosseum first-party plugin.
 
-API reference (Sphinx autodoc) is primary; README/guides are secondary.
+Guides introduce practical workflows before the generated API reference.
 """
 
 from __future__ import annotations
@@ -53,6 +53,9 @@ API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
     ('comment', 'colosseum_shared.prompt.api.comment', 'col.shared.comment'),
 )
 GUIDES: tuple[str, ...] = (
+    "docs/documentation-history.md",
+    "docs/sphinx/source/guides/recipes.rst",
+    "docs/sphinx/source/guides/api_conventions.rst",
     "docs/sphinx/source/guides/getting_started.rst",
     "docs/sphinx/source/guides/evidence_workflows.rst",
 )
@@ -114,6 +117,7 @@ def _write_conf(version: str) -> None:
 
 from __future__ import annotations
 
+import inspect
 import sys
 from pathlib import Path
 
@@ -142,13 +146,50 @@ html_theme_options = {{
 html_baseurl = "{pages_url}"
 
 autodoc_member_order = "bysource"
-autodoc_typehints = "description"
+autodoc_typehints = "signature"
 autodoc_default_options = {{
     "members": True,
     "undoc-members": False,
     "show-inheritance": False,
 }}
 autodoc_mock_imports = [{mocks}]
+
+
+def _document_controls(app, what, name, obj, options, lines):
+    kind = getattr(obj, "__colosseum_decorator__", None)
+    if not kind:
+        return
+    documented = "\\n".join(lines)
+    controls = {{
+        "optional": (
+            "False by default. True excludes unsuccessful outcomes from the "
+            "aggregate result; commands and measurements also suppress "
+            "operation exceptions. A failed optional measurement returns None."
+        ),
+        "description": (
+            "Verification label in summaries and reports; omitted or blank "
+            "uses the evidence key."
+        ),
+    }}
+    for parameter, description in controls.items():
+        if (
+            parameter in inspect.signature(obj).parameters
+            and f":param {{parameter}}:" not in documented
+        ):
+            lines.extend(["", f":param {{parameter}}: {{description}}"])
+    documented = "\\n".join(lines)
+    missing = [
+        parameter
+        for parameter in inspect.signature(obj).parameters
+        if parameter not in ("args", "kwargs")
+        and f":param {{parameter}}:" not in documented
+    ]
+    if missing:
+        raise ValueError(f"{{name}} has undocumented parameters: {{', '.join(missing)}}")
+
+
+def setup(app):
+    app.connect("autodoc-process-docstring", _document_controls)
 '''
     (SITE_SOURCE / "conf.py").write_text(conf, encoding="utf-8")
 
@@ -165,6 +206,8 @@ User-facing APIs under ``{col_path}`` (``import colosseum as col``).
 .. automodule:: {module}
    :members:
    :exclude-members: get_logger
+
+See :doc:`/guides/api_conventions` for evidence, optional failures, and defaults.
 """
     (api_dir / f"{stem}.rst").write_text(body, encoding="utf-8")
     return f"api/{stem}"
@@ -192,53 +235,43 @@ def _write_index(
     config_names: list[str],
 ) -> None:
     lines = [
-        TITLE,
-        "=" * len(TITLE),
+        TITLE, "=" * len(TITLE), "",
+        (
+            "Record values, verify evidence, check files and logs, and "
+            "collect operator input with ``col.shared.*``."
+        ),
         "",
-        "API reference for this first-party Colosseum plugin. Start here for",
-        "``col.*`` callables; use the overview for install notes and examples.",
-        "",
-        f"`Colosseum core documentation hub <{HUB_URL}>`__",
-        "",
-        ".. toctree::",
-        "   :maxdepth: 2",
-        "   :caption: API reference",
-        "",
+        f"`Colosseum core documentation hub <{HUB_URL}>`__", "",
     ]
-    lines.extend(f"   {doc}" for doc in api_docs)
-    lines.extend(
-        [
-            "",
-            ".. toctree::",
-            "   :maxdepth: 2",
-            "   :caption: Overview",
-            "",
-            "   readme",
-        ],
+    development = [
+        name
+        for name in guide_names
+        if name.endswith((
+            "/development",
+            "/driver-documentation-requests",
+            "/documentation-history",
+        ))
+    ]
+    learning = [name for name in guide_names if name not in development]
+    learning.sort(
+        key=lambda name: (
+            not name.endswith("/getting_started"),
+            name.endswith("/api_conventions"),
+        ),
     )
-    if config_names:
-        lines.append("")
-        lines.extend(
-            [
-                ".. toctree::",
-                "   :maxdepth: 2",
-                "   :caption: Config reference",
-                "",
-            ],
-        )
-        lines.extend(f"   {name}" for name in config_names)
-    if guide_names:
-        lines.append("")
-        lines.extend(
-            [
-                ".. toctree::",
-                "   :maxdepth: 2",
-                "   :caption: Guides",
-                "",
-            ],
-        )
-        lines.extend(f"   {name}" for name in guide_names)
-    lines.append("")
+    sections = (
+        ("Overview", ["readme"]),
+        ("Getting started and workflows", learning),
+        ("Configuration", config_names),
+        ("API reference", api_docs),
+        ("Development", development),
+    )
+    for caption, names in sections:
+        if names:
+            lines.extend([".. toctree::", "   :maxdepth: 1", "   :titlesonly:",
+                          f"   :caption: {caption}", ""])
+            lines.extend(f"   {name}" for name in names)
+            lines.append("")
     (SITE_SOURCE / "index.rst").write_text("\n".join(lines), encoding="utf-8")
     _copy_branding()
 
@@ -349,7 +382,13 @@ def stage() -> None:
         guides_dir.mkdir(parents=True, exist_ok=True)
         name = Path(rel).stem
         guide_names.append(f"guides/{name}")
-        text = _sanitize_guide(src.read_text(encoding="utf-8"))
+        text = src.read_text(encoding="utf-8")
+        if src.suffix == ".md":
+            text = subprocess.check_output(
+                ["pandoc", "-f", "markdown", "-t", "rst"], input=text, text=True,
+                encoding="utf-8",
+            )
+        text = _sanitize_guide(text)
         (guides_dir / f"{name}.rst").write_text(text, encoding="utf-8")
 
     _write_conf(_read_version())
