@@ -15,7 +15,7 @@ An empty or comment-only file is enough when you only call ``col.shared.*``::
 2. Procedure + verification
 ---------------------------
 
-::
+Save **shared_smoke.py** beside the config file::
 
    import colosseum as col
 
