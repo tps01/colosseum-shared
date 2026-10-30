@@ -1,6 +1,41 @@
 Portable evidence checks
 ========================
 
+Choose a verification
+---------------------
+
+.. list-table::
+   :header-rows: 1
+
+   * - Task
+     - Callable
+   * - Compare a number or structured field
+     - ``col.shared.verify.verify_field``
+   * - Find text in recorded evidence
+     - ``col.shared.regex.verify_match``
+   * - Check a recorded environment value
+     - ``col.shared.measure_env`` then ``col.shared.verify.verify_env``
+   * - Check an accessible file
+     - ``verify_file_exists`` / ``verify_file_contents``
+   * - Check an action created a file
+     - ``snapshot_files`` before the action, then ``verify_new_file``
+   * - Wait for log text
+     - ``wait_for_log_line`` then record and verify the match
+   * - Record an explicit verdict
+     - ``verify_pass`` / ``verify_fail``
+   * - Check elapsed time
+     - ``measure_mark`` / ``verify_elapsed``
+   * - Ask an operator
+     - ``col.shared.prompt.*`` (interactive input required)
+
+See :doc:`recipes` for small complete examples, :doc:`/api/verify` for exact
+verification arguments, and :doc:`/api/regex` for regex modes. Field/regex
+lookups choose the latest key across domains; keep separate facts under
+separate keys.
+
+Complete demonstration
+----------------------
+
 From the repository root::
 
    colosseum run examples/portable_checks.py -g examples/configs/config.shared.sim.toml
@@ -23,7 +58,7 @@ across **all domains and command names**. Use distinct keys for distinct facts;
 reusing a key in another plugin can change which value a shared verifier checks.
 ``field=`` selects a dictionary/JSON field rather than the entire value.
 
-For numeric limits, use inclusive ``minimum`` and/or ``maximum`` (Shared 0.5.0+)::
+For numeric limits, use inclusive ``minimum`` and/or ``maximum``::
 
    col.shared.measure_value(key="jitter_ps", value=2.0)
    col.shared.verify.verify_field(key="jitter_ps", minimum=0.0, maximum=5.0)
@@ -34,13 +69,12 @@ Do not combine bounds with ``expected_val`` / ``tolerance``. Invalid or non-fini
 bounds/evidence produce ERROR. Boolean expectations require actual Boolean
 evidence; integers and strings do not stand in for ``True`` / ``False``.
 
-Shared 0.6.0 requires numeric expectations to use finite evidence, a finite
+Numeric comparisons require numeric expectations to use finite evidence, a finite
 expectation, and a finite nonnegative tolerance. Integers, including integer
 strings, compare exactly when the other side is an integer.
 
 ``verify_m_of_n`` checks the latest ``n`` prior verification results, excluding
-optional results unless ``include_optional=True``. From Shared 0.6.0, ``m`` and
-``n`` must be integers with ``0 < m <= n``; any other window is ERROR. It cannot
+optional results unless ``include_optional=True``. ``m`` and ``n`` must be integers with ``0 < m <= n``; any other window is ERROR. It cannot
 undo required failures already recorded. For a trial-voting policy, mark each trial optional
 and make the final m-of-n check required. ``verify_all_passed`` excludes optional
 results by default and examines every earlier required result in the run.

@@ -317,6 +317,17 @@ def wait_for_new_file(
     (any matching file counts as new). ``timeout_s`` and ``poll_s`` are seconds, or
     duration strings such as ``500ms`` or ``61s``. Both must be finite and
     nonnegative; zero timeout returns without waiting.
+
+    :param directory: Absolute directory, or a path relative to the active run output directory.
+    :param before: Relative file paths returned by snapshot_files before the action; None uses
+        an empty baseline.
+    :param pattern: Glob pattern relative to directory, such as `*.txt`; defaults to `*`.
+    :param timeout_s: Maximum wait in seconds. Expiration does not establish that the operation
+        completed. Default: ``10.0``.
+    :param poll_s: Delay between polls in seconds, or a duration string such as 500ms. Must be
+        finite and nonnegative. Default: ``0.25``.
+
+    :returns: Path to the new matching file, or None when the wait expires.
     """
     timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
     poll_s = _require_nonnegative_finite("poll_s", poll_s)
@@ -352,6 +363,10 @@ def verify_new_file(
     :param timeout_s: How long to wait for a new match. A number is seconds; a
         string may use duration suffixes (``500ms``, ``61s``). Finite and nonnegative.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
+
+
+    Take snapshot_files before the triggering action and pass that set as
+    before. See the new-file recipe for a complete runnable example.
     """
     _ = key
     timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
