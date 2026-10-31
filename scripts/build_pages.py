@@ -28,6 +28,7 @@ API_MODULES: tuple[tuple[str, str, str], ...] = (
     ('regex', 'colosseum_shared.regex.api', 'col.shared.regex'),
     ('prompt', 'colosseum_shared.prompt.api', 'col.shared.prompt'),
     ('parsing', 'colosseum_shared.parsing.text', 'col.shared.parsing'),
+    ('meta', 'colosseum_shared.meta.api', 'col.shared.meta'),
 )
 # Optional single-function pages: (rst_stem, "module:qualname", displayed name)
 API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
