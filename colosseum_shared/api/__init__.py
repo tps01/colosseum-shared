@@ -8,6 +8,7 @@ from colosseum_shared.measure import (
     measure_value,
     measure_wall_time,
 )
+from colosseum_shared.meta import api as meta
 from colosseum_shared.parsing import text as parsing
 from colosseum_shared.process import run_process
 from colosseum_shared.prompt import api as prompt
@@ -24,6 +25,7 @@ __all__ = [
     "measure_mark",
     "measure_value",
     "measure_wall_time",
+    "meta",
     "parsing",
     "prompt",
     "regex",
