@@ -21,6 +21,9 @@ Baseline expectations for AI agents in this plugin repository.
 - `colosseum_shared/measure.py`: one-off `measure_value` / `measure_env` /
   `measure_mark` / `measure_wall_time` (parallel to `wait.py`).
   `measure_mark` is monotonic. `measure_wall_time` is UTC wall time.
+- `colosseum_shared/meta/api.py`: intentional pass/fail markers under
+  `col.shared.meta` (commands, measurements, verifications). Measurement
+  failure is ERROR via raise (core has no measurement FAIL).
 - Do not add `col.shared.signal` here without an explicit product request (RF
   library TDD is a separate roadmap).
 
