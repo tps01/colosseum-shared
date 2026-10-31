@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colosseum as col
-import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
 from colosseum.runner.paths import ensure_runtime_ready
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
