@@ -11,11 +11,6 @@ license = "MIT"
 license-files = ["LICENSE"]
 dependencies = [
   "colosseum-core>=0.18,<0.19",
-  "pytest>=8.0",
-  "bandit[toml]>=1.7",
-  "vulture>=2.11",
-  "ruff>=0.8",
-  "mypy>=1.11",
 ]
 
 [project.entry-points."colosseum.plugins"]
