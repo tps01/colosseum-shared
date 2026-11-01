@@ -11,6 +11,11 @@ def test_complete_runtime_dependencies_are_installed_by_default() -> None:
 
     assert any(requirement.startswith("colosseum-core") for requirement in requirements)
     assert not any(requirement.startswith("paramiko") for requirement in requirements)
+    assert not any(requirement.startswith("pytest") for requirement in requirements)
+    assert not any(requirement.startswith("ruff") for requirement in requirements)
+    assert not any(requirement.startswith("mypy") for requirement in requirements)
+    assert not any(requirement.startswith("bandit") for requirement in requirements)
+    assert not any(requirement.startswith("vulture") for requirement in requirements)
     assert not metadata.metadata.get_all("Provides-Extra")
 
 
