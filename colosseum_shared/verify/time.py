@@ -42,7 +42,7 @@ def verify_time_delta(
     :type other_key: str
     :param expected_s: Expected delta in seconds.
     :type expected_s: float
-    :param tolerance_s: Allowed absolute difference from ``expected_s``.
+    :param tolerance_s: Finite and nonnegative absolute difference from ``expected_s``.
     :type tolerance_s: float, optional
     :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
     :type optional: bool, optional
@@ -50,6 +50,12 @@ def verify_time_delta(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if not isfinite(tolerance_s) or tolerance_s < 0:
+        return VerificationResult(
+            status="ERROR",
+            message=f"tolerance_s must be finite and nonnegative, got {tolerance_s!r}",
+            optional=optional,
+        )
     row = latest_measurement_by_key(key)
     if row is None:
         _logger.debug("verify_time_delta key=%s missing measurement", key)

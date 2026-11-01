@@ -380,6 +380,26 @@ def test_verify_time_delta_fail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert result.status == "FAIL"
 
 
+@pytest.mark.parametrize("tolerance_s", [float("inf"), float("nan"), float("-inf"), -1.0])
+def test_verify_time_delta_rejects_invalid_tolerance(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    tolerance_s: float,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    _insert_measurement(key="earlier", timestamp="2026-01-01T00:00:00+00:00")
+    _insert_measurement(key="later", timestamp="2026-01-01T00:00:02+00:00")
+    result = col.shared.verify.verify_time_delta(
+        key="later",
+        other_key="earlier",
+        expected_s=100,
+        tolerance_s=tolerance_s,
+    )
+    assert result.status == "ERROR"
+    assert result.message is not None
+    assert "finite" in result.message
+
+
 def test_verify_all_passed_after_fail(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _pass_verify(key="a")
