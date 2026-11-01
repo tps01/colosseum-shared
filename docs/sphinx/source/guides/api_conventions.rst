@@ -7,6 +7,8 @@ Call public APIs through ``import colosseum as col`` and the documented
 no default. See each callable for its units and driver-specific restrictions.
 
 Commands record actions and re-raise exceptions unless ``optional=True``.
+Returned ``CommandResult`` values must carry the caller ``optional`` flag
+(for example prompt timeouts) so the stored row matches the call.
 Measurements record returned evidence under ``key``; an exception records a
 null ERROR row and re-raises unless ``optional=True``, which returns ``None``.
 Verification FAIL/ERROR/BLOCKED outcomes are recorded without aborting later

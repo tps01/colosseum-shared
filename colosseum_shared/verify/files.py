@@ -86,7 +86,10 @@ def verify_file_absent(
 ) -> VerificationResult:
     """PASS when ``path`` is not an existing regular file.
 
-    A missing path passes. A directory passes because it is not a regular file.
+    When ``path`` is provided, a missing path or a directory PASSes (not a
+    regular file). When ``path`` is omitted, the latest measurement for
+    ``key`` supplies the path; a missing measurement is ERROR/BLOCKED, not a
+    vacuous PASS.
 
     :param key: Verification evidence key (and measurement key when ``path`` is omitted).
     :type key: str
@@ -316,14 +319,16 @@ def wait_for_new_file(
     Entries are paths relative to ``directory``. When omitted, an empty set is used
     (any matching file counts as new). ``timeout_s`` and ``poll_s`` are seconds, or
     duration strings such as ``500ms`` or ``61s``. Both must be finite and
-    nonnegative; zero timeout returns without waiting.
+    nonnegative. Unlike ``wait_for_log_line``, ``timeout_s=0`` does not look once:
+    the wait loop never runs, so the result is always ``None`` (use a positive
+    timeout to poll).
 
     :param directory: Absolute directory, or a path relative to the active run output directory.
     :param before: Relative file paths returned by snapshot_files before the action; None uses
         an empty baseline.
     :param pattern: Glob pattern relative to directory, such as `*.txt`; defaults to `*`.
-    :param timeout_s: Maximum wait in seconds. Expiration does not establish that the operation
-        completed. Default: ``10.0``.
+    :param timeout_s: Maximum wait in seconds. ``0`` skips polling (always ``None``).
+        Default: ``10.0``.
     :param poll_s: Delay between polls in seconds, or a duration string such as 500ms. Must be
         finite and nonnegative. Default: ``0.25``.
 
@@ -410,7 +415,8 @@ def verify_no_new_file(
     :param pattern: Glob relative to ``directory``.
     :param settle_s: How long the directory must stay quiet. A number is seconds;
         a string may use duration suffixes (``500ms``, ``61s``). Finite and
-        nonnegative; zero returns immediately.
+        nonnegative. ``settle_s=0`` does not poll (vacuous PASS via
+        ``wait_for_new_file``); use a positive settle to watch the directory.
     :param optional: When ``True``, FAIL does not fail the run at ``col.endex()``.
     """
     _ = key
