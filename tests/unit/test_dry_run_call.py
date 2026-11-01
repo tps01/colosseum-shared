@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colosseum as col
-import pytest
 from colosseum.config import load_config
 from colosseum.context import get_context
 from colosseum.decorators._common import DRY_RUN_ATTR
 from colosseum.runner.paths import ensure_runtime_ready
 from colosseum_shared.prompt import api as prompt_api
+
+if TYPE_CHECKING:
+    import pytest
 
 
 def _load_shared_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
