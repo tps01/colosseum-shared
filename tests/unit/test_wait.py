@@ -44,8 +44,30 @@ def test_wait_progress_bar_ticks(
     monkeypatch.setattr("colosseum_shared.wait.time.sleep", lambda _s: None)
     col.shared.wait(duration=0.3, progress_bar=True)
     out = capsys.readouterr().out
-    assert "[" in out
-    assert "0.3s" in out
+    assert "[" + ("#" * 40) + "]" in out
+    assert out.endswith("0.3/0.3s\n") or "0.3/0.3s\n" in out
+
+
+def test_wait_progress_bar_zero_duration_returns_immediately(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    _load(tmp_path, monkeypatch)
+    slept: list[float] = []
+    monkeypatch.setattr("colosseum_shared.wait.time.sleep", slept.append)
+    col.shared.wait(duration=0, progress_bar=True)
+    assert slept == []
+    assert "\r[" not in capsys.readouterr().out
+
+
+def test_wait_default_uses_plain_sleep_without_bar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+) -> None:
+    _load(tmp_path, monkeypatch)
+    slept: list[float] = []
+    monkeypatch.setattr("colosseum_shared.wait.time.sleep", slept.append)
+    col.shared.wait(duration=0.1)
+    assert slept == [pytest.approx(0.1)]
+    assert "\r[" not in capsys.readouterr().out
 
 
 def test_wait_rejects_nonfinite(
