@@ -22,7 +22,7 @@ the downloaded filename. For development, use `python -m pip install -e .`.
 python -m pip install "./colosseum_shared-<version>-py3-none-any.whl"
 ```
 
-This requires `colosseum-core` `>=0.17.0,<0.18` and registers the `shared` namespace
+This requires `colosseum-core` `>=0.18,<0.19` and registers the `shared` namespace
 through the `colosseum.plugins` entry point.
 
 ## Generic fallbacks
