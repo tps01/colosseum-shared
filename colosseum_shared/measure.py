@@ -15,7 +15,7 @@ from colosseum_shared._evidence import resolve_path
 _logger = get_logger("colosseum.shared")
 
 
-@measurement
+@measurement(dry_run="call")
 def measure_value(*, key: str, value: object) -> object:
     """Record an arbitrary literal as a measurement (one-off evidence).
 
@@ -32,7 +32,7 @@ def measure_value(*, key: str, value: object) -> object:
     return value
 
 
-@measurement
+@measurement(dry_run="call")
 def measure_env(*, key: str, name: str) -> str:
     """Record an environment variable value.
 
@@ -54,7 +54,7 @@ def measure_env(*, key: str, name: str) -> str:
     return value
 
 
-@measurement
+@measurement(dry_run="call")
 def measure_mark(*, key: str) -> float:
     """Record ``time.perf_counter()`` for later ``verify_elapsed``.
 
@@ -74,7 +74,7 @@ def measure_mark(*, key: str) -> float:
     return mark
 
 
-@measurement
+@measurement(dry_run="call")
 def measure_wall_time(*, key: str) -> str:
     """Record the current UTC time as an ISO-8601 string.
 

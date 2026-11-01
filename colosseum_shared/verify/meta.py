@@ -117,7 +117,7 @@ def verify_m_of_n(
     )
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_pass")
 def verify_pass(*, key: str, message: str = "", optional: bool = False) -> VerificationResult:
     """Record an intentional PASS verification marker.

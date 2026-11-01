@@ -192,9 +192,12 @@ def prompt_choice(
     )
 
 
-@command
+@command(dry_run="call")
 def comment(*, message: str) -> None:
     """Log a test annotation at INFO on the run console and in ``debug.log``.
+
+    Runs under ``--dry-run`` (``dry_run="call"``) so annotations still appear
+    in the walk log.
 
     :param message: Text written at INFO.
     :type message: str

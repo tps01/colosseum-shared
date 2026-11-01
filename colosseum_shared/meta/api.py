@@ -19,7 +19,7 @@ from colosseum.logging import get_logger
 _logger = get_logger("colosseum.shared")
 
 
-@command
+@command(dry_run="call")
 def command_pass(
     *,
     key: str = "",
@@ -65,7 +65,7 @@ def command_fail(
     return CommandResult(status="FAIL", message=message, optional=optional)
 
 
-@measurement
+@measurement(dry_run="call")
 def measure_pass(*, key: str, value: object = True) -> object:
     """Record an intentional PASS measurement.
 
@@ -110,7 +110,7 @@ def measure_fail(
     raise RuntimeError(message)
 
 
-@verification
+@verification(dry_run="call")
 def verify_pass(*, key: str, message: str = "", optional: bool = False) -> VerificationResult:
     """Record an intentional PASS verification.
 
