@@ -28,7 +28,7 @@ _logger = get_logger("colosseum.shared")
 _UNSET = object()
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_field")
 def verify_field(
     *,
@@ -139,7 +139,7 @@ def verify_field(
     )
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_measurement_exists")
 def verify_measurement_exists(*, key: str, optional: bool = False) -> VerificationResult:
     """Verify a measurement row exists for ``key`` in any domain.
@@ -159,7 +159,7 @@ def verify_measurement_exists(*, key: str, optional: bool = False) -> Verificati
     return missing_measurement_result(key=key, optional=optional)
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_env")
 def verify_env(
     *,
@@ -193,7 +193,7 @@ def verify_env(
     )
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_equal")
 def verify_equal(
     *,
@@ -230,7 +230,7 @@ def verify_equal(
     )
 
 
-@verification
+@verification(dry_run="call")
 @with_verify_command("verify_in")
 def verify_in(
     *,

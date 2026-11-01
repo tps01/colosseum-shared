@@ -103,6 +103,22 @@ def test_prompt_timeout_returns_error(
     result = prompt_api.prompt(message="LED green?", timeout_s=0.1)
     assert result is not None
     assert result.status == "ERROR"
+    assert result.optional is False
+
+
+def test_prompt_timeout_optional_does_not_fail_run(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(prompt_api, "wait_any_key", lambda *, message, timeout_s: False)
+    result = prompt_api.prompt(message="LED green?", timeout_s=0.1, optional=True)
+    assert result is not None
+    assert result.status == "ERROR"
+    assert result.optional is True
+    row = get_context().db.fetch_table_rows("commands")[-1]
+    assert row["optional"] in (1, True)
+    assert get_context().result_aggregator.exit_code() == 0
 
 
 def test_prompt_measurement_timeout_returns_none(
@@ -153,6 +169,25 @@ def test_prompt_exit_timeout_does_not_exit(
     )
     assert result is not None
     assert result.status == "ERROR"
+    assert result.optional is False
+
+
+def test_prompt_exit_optional_mismatch_returns_without_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    monkeypatch.setattr(prompt_api, "read_line", lambda *, message: "FAIL")
+    result = prompt_api.prompt_exit(
+        message="Type PASS: ", key="ack", expected="PASS", optional=True,
+    )
+    assert result is not None
+    assert result.status == "FAIL"
+    assert result.optional is True
+    row = get_context().db.fetch_table_rows("commands")[-1]
+    assert row["status"] == "FAIL"
+    assert row["optional"] in (1, True)
+    assert get_context().result_aggregator.exit_code() == 0
 
 
 def test_prompt_namespace_via_col(

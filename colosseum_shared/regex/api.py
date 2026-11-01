@@ -14,7 +14,7 @@ from colosseum_shared._evidence import latest_measurement_by_key
 _logger = get_logger("colosseum.shared")
 
 
-@verification
+@verification(dry_run="call")
 def verify_match(
     *,
     key: str,

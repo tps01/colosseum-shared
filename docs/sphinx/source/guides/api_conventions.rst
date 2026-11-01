@@ -7,11 +7,20 @@ Call public APIs through ``import colosseum as col`` and the documented
 no default. See each callable for its units and driver-specific restrictions.
 
 Commands record actions and re-raise exceptions unless ``optional=True``.
+Returned ``CommandResult`` values must carry the caller ``optional`` flag
+(for example prompt timeouts) so the stored row matches the call.
 Measurements record returned evidence under ``key``; an exception records a
 null ERROR row and re-raises unless ``optional=True``, which returns ``None``.
 Verification FAIL/ERROR/BLOCKED outcomes are recorded without aborting later
 steps. ``optional=True`` excludes an outcome from the aggregate verdict; it
 does not make a later dependent verification optional.
+
+Under ``--dry-run``, most decorated APIs only log intent (``dry_run="log"``).
+Harmless local helpers opt into ``dry_run="call"`` so the body still runs:
+``comment``, ``measure_value`` / ``measure_env`` / ``measure_mark`` /
+``measure_wall_time``, intentional PASS meta markers, and field/regex
+verifiers that read those facts. Waits, prompts, FAIL injectors, and file or
+process helpers stay on ``"log"``.
 
 Keep measurement keys distinct for separate facts. Instrument IDs and channels
 do not distinguish measurements with the same domain, command, key, and row

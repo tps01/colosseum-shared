@@ -69,7 +69,12 @@ def _mark_command(name: str) -> Callable[[_F], _F]:
 
 
 @command
-def prompt(*, message: str, timeout_s: float | None = None) -> CommandResult | None:
+def prompt(
+    *,
+    message: str,
+    timeout_s: float | None = None,
+    optional: bool = False,
+) -> CommandResult | None:
     """Display a message and block until the operator presses any key.
 
     ``timeout_s`` limits the wait. On timeout the command is recorded as ERROR
@@ -79,6 +84,8 @@ def prompt(*, message: str, timeout_s: float | None = None) -> CommandResult | N
     :type message: str
     :param timeout_s: Maximum wait in seconds. Omit to wait without a limit.
     :type timeout_s: float | None, optional
+    :param optional: When ``True``, timeout ERROR does not fail the run at ``col.endex()``.
+    :type optional: bool, optional
 
     :returns: ``None`` when a key arrives. A ``CommandResult`` with status ERROR on timeout.
     """
@@ -91,6 +98,7 @@ def prompt(*, message: str, timeout_s: float | None = None) -> CommandResult | N
     return CommandResult(
         status="ERROR",
         message=f"no key within {timeout_s} s",
+        optional=optional,
     )
 
 
@@ -184,9 +192,12 @@ def prompt_choice(
     )
 
 
-@command
+@command(dry_run="call")
 def comment(*, message: str) -> None:
     """Log a test annotation at INFO on the run console and in ``debug.log``.
+
+    Runs under ``--dry-run`` (``dry_run="call"``) so annotations still appear
+    in the walk log.
 
     :param message: Text written at INFO.
     :type message: str
@@ -198,14 +209,20 @@ def comment(*, message: str) -> None:
 
 @command
 def prompt_exit(
-    *, message: str, key: str, expected: str, timeout_s: float | None = None,
+    *,
+    message: str,
+    key: str,
+    expected: str,
+    timeout_s: float | None = None,
+    optional: bool = False,
 ) -> CommandResult | None:
     """Prompt for input, record it, and exit the run immediately on mismatch.
 
     The entered value is stored as a measurement under ``key``. When it does not
     exactly match ``expected``, the run is marked FAIL and ``col.endex()`` is
-    invoked (the process exits without returning to the caller). Timeout records
-    ERROR and returns; it does not call ``endex()``.
+    invoked (the process exits without returning to the caller) unless
+    ``optional=True``. Timeout records ERROR and returns; it does not call
+    ``endex()``.
 
     :param message: Prompt text shown before reading stdin.
     :type message: str
@@ -215,18 +232,29 @@ def prompt_exit(
     :type expected: str
     :param timeout_s: Maximum wait in seconds. Omit to wait without a limit.
     :type timeout_s: float | None, optional
+    :param optional: When ``True``, mismatch FAIL and timeout ERROR do not fail
+        the run at ``col.endex()``; mismatch also returns instead of exiting.
+    :type optional: bool, optional
 
-    :returns: ``None`` when the input matches ``expected``. A ``CommandResult``
-        with status ERROR on timeout.
+    :returns: ``None`` when the input matches ``expected``, or after an optional
+        mismatch. A ``CommandResult`` with status ERROR on timeout.
 
-    :raises SystemExit: Exit code ``1`` when the input does not match ``expected``.
+    :raises SystemExit: Exit code ``1`` when the input does not match ``expected``
+        and ``optional`` is false.
     """
     entered = prompt_measurement(message=message, key=key, timeout_s=timeout_s)
     if entered is None:
-        return CommandResult(status="ERROR", message=f"no input within {timeout_s} s")
+        return CommandResult(
+            status="ERROR",
+            message=f"no input within {timeout_s} s",
+            optional=optional,
+        )
     if entered != expected:
+        message_fail = f"expected {expected!r}, got {entered!r}"
+        if optional:
+            return CommandResult(status="FAIL", message=message_fail, optional=True)
         _fail_and_exit(
-            message=f"expected {expected!r}, got {entered!r}",
+            message=message_fail,
             key=key,
             command=_PROMPT_EXIT_COMMAND,
         )

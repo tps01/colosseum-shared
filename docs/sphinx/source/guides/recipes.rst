@@ -43,7 +43,9 @@ Wait for a log message: log_check.py
 Expected: PASS and exit 0. In a live procedure, trigger the producer before
 polling. The helper returns ``None`` at timeout; recording and verifying its
 return makes the timeout affect acceptance. It is an undecorated helper,
-so it still polls in dry-run or replay mode.
+so it still polls in dry-run or replay mode. ``timeout_s=0`` looks at the
+file once (no sleep). ``wait_for_new_file(..., timeout_s=0)`` does not look
+at all and always returns ``None``.
 
 Verify that a new file appeared: new_file.py
 --------------------------------------------
