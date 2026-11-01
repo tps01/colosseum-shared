@@ -79,7 +79,7 @@ def test_verify_elapsed_rejects_nonfinite_mark_or_limit(
         key="elapsed", mark_key="mark", maximum_s=maximum_s,
     )
     assert result.status == "ERROR"
-    assert result.actual != float("-inf")
+    assert "finite" in result.message or "nonnegative" in result.message
 
 
 def test_measure_wall_time_delta(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
