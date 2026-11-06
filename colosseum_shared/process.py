@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import subprocess
 import threading
+import time
 from math import isfinite
 from typing import TYPE_CHECKING
 
@@ -19,21 +20,21 @@ _logger = get_logger("colosseum.shared")
 def _read_stream(
     stream: object,
     sink: list[str],
-    stop: threading.Event,
+    halt: threading.Event,
     terminator: str | None,
+    found_terminator: threading.Event | None,
 ) -> None:
     reader = getattr(stream, "readline", None)
     if reader is None:
-        stop.set()
         return
-    while not stop.is_set():
+    while not halt.is_set():
         line = reader()
         if not isinstance(line, str) or line == "":
-            stop.set()
             return
         sink.append(line)
         if terminator is not None and terminator in "".join(sink):
-            stop.set()
+            if found_terminator is not None:
+                found_terminator.set()
             return
 
 
@@ -52,6 +53,9 @@ def run_process(
     Timeout kills the process. ``timed_out`` is false when ``terminator`` was seen.
     ``exit_code`` is ``None`` when the process is killed before it exits. This is
     not a terminal emulator and not a serial port.
+
+    Closing one pipe (for example stderr) does not end the wait while the child
+    is still alive; only terminator, process exit, or ``timeout_s`` complete it.
 
     :param key: Unique measurement key within domain ``shared``.
     :type key: str
@@ -83,16 +87,17 @@ def run_process(
     )
     stdout_parts: list[str] = []
     stderr_parts: list[str] = []
-    stop = threading.Event()
+    halt = threading.Event()
+    found_terminator = threading.Event()
     threads = (
         threading.Thread(
             target=_read_stream,
-            args=(process.stdout, stdout_parts, stop, terminator),
+            args=(process.stdout, stdout_parts, halt, terminator, found_terminator),
             daemon=True,
         ),
         threading.Thread(
             target=_read_stream,
-            args=(process.stderr, stderr_parts, stop, None),
+            args=(process.stderr, stderr_parts, halt, None, None),
             daemon=True,
         ),
     )
@@ -103,7 +108,21 @@ def run_process(
             process.stdin.write(stdin_line + "\n")
             process.stdin.flush()
         process.stdin.close()
-    finished = stop.wait(timeout_s)
+
+    deadline = time.monotonic() + timeout_s
+    timed_out = False
+    while True:
+        if found_terminator.is_set():
+            break
+        if process.poll() is not None:
+            break
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            timed_out = True
+            break
+        time.sleep(min(0.05, remaining))
+
+    halt.set()
     if process.poll() is None:
         try:
             process.wait(timeout=0.5)
@@ -114,7 +133,6 @@ def run_process(
         thread.join(timeout=1)
     stdout = "".join(stdout_parts)
     saw_terminator = terminator is not None and terminator in stdout
-    timed_out = not finished and not saw_terminator
     if saw_terminator and terminator is not None:
         stdout = stdout[: stdout.index(terminator) + len(terminator)]
     exit_code = None if timed_out else process.returncode

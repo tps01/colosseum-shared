@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -58,3 +59,26 @@ def test_run_process_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     )
     assert result["timed_out"] is True
     assert result["exit_code"] is None
+
+
+def test_run_process_closed_stderr_does_not_end_wait_early(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _load_shared_config(tmp_path, monkeypatch)
+    script = (
+        "import os, sys, time;"
+        "print('started', flush=True);"
+        "os.close(2);"
+        "time.sleep(5)"
+    )
+    started = time.monotonic()
+    result = col.shared.run_process(
+        key="stderr-closed",
+        argv=[sys.executable, "-c", script],
+        timeout_s=2,
+    )
+    elapsed = time.monotonic() - started
+    assert result["timed_out"] is True
+    assert result["exit_code"] is None
+    assert "started" in str(result["stdout"])
+    assert elapsed >= 1.5
