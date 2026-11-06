@@ -2,13 +2,41 @@
 
 from __future__ import annotations
 
+from math import isfinite
+
+from colosseum.context import get_context
 from colosseum.decorators import VerificationResult, verification
 from colosseum.logging import get_logger
 
-from colosseum_shared._evidence import prior_verifications
+from colosseum_shared._evidence import (
+    compare_expected,
+    prior_verifications,
+    within_inclusive_bounds,
+)
 from colosseum_shared.verify._command import with_verify_command
 
 _logger = get_logger("colosseum.shared")
+_UNSET = object()
+
+
+def _error_count(*, include_optional: bool) -> int:
+    """Count ERROR evidence rows across commands, measurements, and verifications."""
+    db = get_context().db
+    total = 0
+    for command in db.fetch_all_commands():
+        if command.status != "ERROR":
+            continue
+        if include_optional or not command.optional:
+            total += 1
+    for measurement in db.fetch_all_measurements():
+        if measurement.status == "ERROR":
+            total += 1
+    for verify_row in db.fetch_all_verifications():
+        if verify_row.status != "ERROR":
+            continue
+        if include_optional or not verify_row.optional:
+            total += 1
+    return total
 
 
 @verification
@@ -114,6 +142,112 @@ def verify_m_of_n(
         message=f"expected at least {m} of last {n} to PASS, got {passed}",
         optional=optional,
         actual=passed,
+    )
+
+
+@verification(dry_run="call")
+@with_verify_command("verify_error_count")
+def verify_error_count(
+    *,
+    key: str,
+    expected: object = _UNSET,
+    minimum: float | None = None,
+    maximum: float | None = None,
+    tolerance: float = 0.0,
+    include_optional: bool = False,
+    optional: bool = False,
+) -> VerificationResult:
+    """Verify the count of ERROR rows already stored in the run database.
+
+    Counts ERROR status across commands, measurements, and verifications.
+    Optional command/verification ERROR rows are omitted unless
+    ``include_optional=True``. Use ``expected`` (with optional ``tolerance``)
+    or inclusive ``minimum`` / ``maximum`` bounds — not both.
+
+    Prior optional ERROR commands are expected when the script must continue
+    into this check.
+
+    :param key: Verification evidence key.
+    :type key: str
+    :param expected: Exact expected ERROR count (numeric compare with ``tolerance``).
+    :type expected: object
+    :param minimum: Inclusive lower bound on the ERROR count.
+    :type minimum: float | None, optional
+    :param maximum: Inclusive upper bound on the ERROR count.
+    :type maximum: float | None, optional
+    :param tolerance: Absolute tolerance for ``expected``. Finite and nonnegative.
+    :type tolerance: float, optional
+    :param include_optional: When ``True``, optional ERROR commands/verifications count.
+    :type include_optional: bool, optional
+    :param optional: When ``True``, FAIL/ERROR does not fail the run at ``col.endex()``.
+    :type optional: bool, optional
+
+    :returns: VerificationResult with PASS, FAIL, or ERROR status.
+    :rtype: VerificationResult
+    """
+    _ = key
+    count = _error_count(include_optional=include_optional)
+    _logger.debug(
+        "verify_error_count key=%s count=%d expected=%r min=%r max=%r",
+        key,
+        count,
+        expected,
+        minimum,
+        maximum,
+    )
+    if minimum is not None or maximum is not None:
+        if expected is not _UNSET or tolerance != 0.0:
+            return VerificationResult(
+                status="ERROR",
+                message="Use expected/tolerance or minimum/maximum, not both",
+                optional=optional,
+                actual=count,
+            )
+        for bound in (minimum, maximum):
+            if bound is not None and (isinstance(bound, bool) or not isfinite(bound)):
+                return VerificationResult(
+                    status="ERROR",
+                    message="Bounds must be finite numbers",
+                    optional=optional,
+                    actual=count,
+                )
+        if minimum is not None and maximum is not None and minimum > maximum:
+            return VerificationResult(
+                status="ERROR",
+                message=f"minimum {minimum} is greater than maximum {maximum}",
+                optional=optional,
+                actual=count,
+            )
+        try:
+            passed, actual = within_inclusive_bounds(
+                count, minimum=minimum, maximum=maximum,
+            )
+        except ValueError as exc:
+            return VerificationResult(
+                status="ERROR", message=str(exc), optional=optional, actual=count,
+            )
+        if passed:
+            return VerificationResult(
+                status="PASS", message="", optional=optional, actual=actual,
+            )
+        return VerificationResult(
+            status="FAIL",
+            message=f"error count {count} outside bounds min={minimum!r} max={maximum!r}",
+            optional=optional,
+            actual=count,
+        )
+    if expected is _UNSET:
+        return VerificationResult(
+            status="ERROR",
+            message="provide expected or minimum/maximum for verify_error_count",
+            optional=optional,
+            actual=count,
+        )
+    return compare_expected(
+        actual=count,
+        expected_val=expected,
+        tolerance=tolerance,
+        optional=optional,
     )
 
 

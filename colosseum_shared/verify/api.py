@@ -21,6 +21,7 @@ from colosseum_shared.verify.files import (
 )
 from colosseum_shared.verify.meta import (
     verify_all_passed,
+    verify_error_count,
     verify_fail,
     verify_m_of_n,
     verify_pass,
@@ -35,6 +36,7 @@ __all__ = [
     "verify_elapsed",
     "verify_env",
     "verify_equal",
+    "verify_error_count",
     "verify_fail",
     "verify_field",
     "verify_file_absent",
