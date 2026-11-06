@@ -19,24 +19,24 @@ _logger = get_logger("colosseum.shared")
 _UNSET = object()
 
 
-def _error_rows(*, include_optional: bool) -> list[object]:
-    """Collect ERROR evidence rows from commands, measurements, and verifications."""
+def _error_count(*, include_optional: bool) -> int:
+    """Count ERROR evidence rows across commands, measurements, and verifications."""
     db = get_context().db
-    rows: list[object] = []
-    for row in db.fetch_all_commands():
-        if row.status != "ERROR":
+    total = 0
+    for command in db.fetch_all_commands():
+        if command.status != "ERROR":
             continue
-        if include_optional or not row.optional:
-            rows.append(row)
-    for row in db.fetch_all_measurements():
-        if row.status == "ERROR":
-            rows.append(row)
-    for row in db.fetch_all_verifications():
-        if row.status != "ERROR":
+        if include_optional or not command.optional:
+            total += 1
+    for measurement in db.fetch_all_measurements():
+        if measurement.status == "ERROR":
+            total += 1
+    for verification in db.fetch_all_verifications():
+        if verification.status != "ERROR":
             continue
-        if include_optional or not row.optional:
-            rows.append(row)
-    return rows
+        if include_optional or not verification.optional:
+            total += 1
+    return total
 
 
 @verification
@@ -186,7 +186,7 @@ def verify_error_count(
     :rtype: VerificationResult
     """
     _ = key
-    count = len(_error_rows(include_optional=include_optional))
+    count = _error_count(include_optional=include_optional)
     _logger.debug(
         "verify_error_count key=%s count=%d expected=%r min=%r max=%r",
         key,
