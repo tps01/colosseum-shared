@@ -31,10 +31,10 @@ def _error_count(*, include_optional: bool) -> int:
     for measurement in db.fetch_all_measurements():
         if measurement.status == "ERROR":
             total += 1
-    for verification in db.fetch_all_verifications():
-        if verification.status != "ERROR":
+    for verify_row in db.fetch_all_verifications():
+        if verify_row.status != "ERROR":
             continue
-        if include_optional or not verification.optional:
+        if include_optional or not verify_row.optional:
             total += 1
     return total
 
