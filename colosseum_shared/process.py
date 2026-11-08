@@ -71,13 +71,13 @@ def run_process(
     :returns: ``stdout``, ``stderr``, ``exit_code``, and ``timed_out``.
     :rtype: dict[str, object]
     """
-    _ = key
     if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)):
         raise ValueError(f"timeout_s must be a finite nonnegative number, got {timeout_s!r}")
     if not isfinite(timeout_s) or timeout_s < 0:
         raise ValueError(f"timeout_s must be a finite nonnegative number, got {timeout_s!r}")
     if not argv:
         raise ValueError("argv must not be empty")
+    _logger.info("Running %s for measurement %s", argv[0], key)
     process = subprocess.Popen(
         list(argv),
         stdin=subprocess.PIPE,

@@ -56,6 +56,11 @@ def verify_time_delta(
             message=f"tolerance_s must be finite and nonnegative, got {tolerance_s!r}",
             optional=optional,
         )
+    _logger.info(
+        "Checking the time from measurement %s to measurement %s",
+        other_key,
+        key,
+    )
     row = latest_measurement_by_key(key)
     if row is None:
         _logger.debug("verify_time_delta key=%s missing measurement", key)
@@ -131,6 +136,11 @@ def verify_elapsed(
             message=f"maximum_s must be finite and nonnegative, got {maximum_s!r}",
             optional=optional,
         )
+    _logger.info(
+        "Checking elapsed time since mark %s is at most %s s",
+        mark_key,
+        maximum_s,
+    )
     row = latest_measurement_by_key(mark_key)
     if row is None or row.value is None:
         return missing_measurement_result(key=mark_key, optional=optional)
@@ -242,6 +252,14 @@ def verify_wall_time_delta(
             message=f"tolerance_s must be finite and nonnegative, got {tolerance_s!r}",
             optional=optional,
         )
+    if other_key is not None:
+        _logger.info(
+            "Checking wall time of measurement %s against measurement %s",
+            key,
+            other_key,
+        )
+    else:
+        _logger.info("Checking wall time of measurement %s against a reference time", key)
     end, end_error = _wall_instant(key=key, literal=None, optional=optional)
     if end_error is not None or end is None:
         return end_error or VerificationResult(

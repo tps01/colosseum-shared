@@ -89,7 +89,7 @@ def prompt(
 
     :returns: ``None`` when a key arrives. A ``CommandResult`` with status ERROR on timeout.
     """
-    _logger.info("%s", message)
+    _logger.info("Waiting for any key: %s", message)
     if timeout_s is None:
         wait_any_key(message=message)
         return None
@@ -107,12 +107,12 @@ def prompt(
 def _prompt_measurement_record(
     *, message: str, key: str, timeout_s: float | None = None,
 ) -> str:
+    _ = key
     line = read_line(message=message) if timeout_s is None else read_line(
         message=message, timeout_s=timeout_s,
     )
     if line is None:
         raise PromptTimeoutError(f"no input within {timeout_s} s")
-    _logger.info("prompt_measurement key=%s", key)
     return line
 
 
@@ -134,6 +134,7 @@ def prompt_measurement(
     :returns: The operator's input line, or ``None`` on timeout.
     :rtype: str | None
     """
+    _logger.info("Prompting for measurement %s: %s", key, message)
     try:
         return _prompt_measurement_record(message=message, key=key, timeout_s=timeout_s)
     except PromptTimeoutError:
@@ -175,6 +176,7 @@ def prompt_choice(
             message="choices must be a non-empty sequence of allowed lines",
             optional=optional,
         )
+    _logger.info("Asking the operator to choose for %s", key)
     entered = prompt_measurement(message=message, key=key, timeout_s=timeout_s)
     if entered is None:
         return VerificationResult(
@@ -242,6 +244,7 @@ def prompt_exit(
     :raises SystemExit: Exit code ``1`` when the input does not match ``expected``
         and ``optional`` is false.
     """
+    _logger.info("Prompting to confirm %s matches %s", key, expected)
     entered = prompt_measurement(message=message, key=key, timeout_s=timeout_s)
     if entered is None:
         return CommandResult(
