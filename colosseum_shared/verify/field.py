@@ -75,6 +75,10 @@ def verify_field(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if field is None:
+        _logger.info("Checking measurement %s", key)
+    else:
+        _logger.info("Checking field %s of measurement %s", field, key)
     row = latest_measurement_by_key(key)
     if row is None:
         _logger.debug("verify_field key=%s missing measurement", key)
@@ -152,6 +156,7 @@ def verify_measurement_exists(*, key: str, optional: bool = False) -> Verificati
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking that measurement %s exists", key)
     exists = measurement_exists(key)
     _logger.debug("verify_measurement_exists key=%s exists=%s", key, exists)
     if exists:
@@ -179,6 +184,7 @@ def verify_env(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking environment measurement %s", key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)
@@ -216,6 +222,7 @@ def verify_equal(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking measurement %s matches measurement %s", key, other_key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)
@@ -256,6 +263,7 @@ def verify_in(
             message="choices must be a non-empty sequence of allowed values",
             optional=optional,
         )
+    _logger.info("Checking measurement %s is an allowed value", key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)

@@ -59,6 +59,7 @@ def verify_all_passed(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking that prior verifications passed")
     rows = prior_verifications(include_optional=include_optional)
     failures = [row for row in rows if row.status != "PASS"]
     _logger.debug(
@@ -125,6 +126,11 @@ def verify_m_of_n(
             message=f"m and n must be integers with 0 < m <= n, got m={m!r} n={n!r}",
             optional=optional,
         )
+    _logger.info(
+        "Checking that at least %s of the last %s verifications passed",
+        m,
+        n,
+    )
     rows = prior_verifications(include_optional=include_optional)
     if len(rows) < n:
         return VerificationResult(
@@ -266,7 +272,7 @@ def verify_pass(*, key: str, message: str = "", optional: bool = False) -> Verif
     :returns: VerificationResult with PASS status.
     :rtype: VerificationResult
     """
-    _ = key
+    _logger.info("Recording a passing verification %s", key)
     return VerificationResult(status="PASS", message=message, optional=optional)
 
 
@@ -290,5 +296,5 @@ def verify_fail(
     :returns: VerificationResult with FAIL status.
     :rtype: VerificationResult
     """
-    _ = key
+    _logger.info("Recording a failing verification %s", key)
     return VerificationResult(status="FAIL", message=message, optional=optional)

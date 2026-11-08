@@ -45,6 +45,10 @@ def verify_file_exists(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if path is None:
+        _logger.info("Checking that the file from measurement %s exists", key)
+    else:
+        _logger.info("Checking that file %s exists", path)
     file_path = path
     if file_path is None:
         row = latest_measurement_by_key(key)
@@ -101,6 +105,10 @@ def verify_file_absent(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if path is None:
+        _logger.info("Checking that the file from measurement %s is absent", key)
+    else:
+        _logger.info("Checking that file %s is absent", path)
     file_path = path
     if file_path is None:
         row = latest_measurement_by_key(key)
@@ -159,6 +167,10 @@ def verify_file_contents(
             message=f"count must be >= 1, got {count}",
             optional=optional,
         )
+    if path is None:
+        _logger.info("Checking the file from measurement %s for pattern %s", key, pattern)
+    else:
+        _logger.info("Checking file %s for pattern %s", path, pattern)
     file_path = path
     if file_path is None:
         row = latest_measurement_by_key(key)
@@ -261,6 +273,7 @@ def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
     :param directory: Absolute directory, or relative to the run output directory.
     :param pattern: Glob relative to ``directory`` (for example ``*_screenshot.*``).
     """
+    _logger.info("Snapshotting files matching %s in %s", pattern, directory)
     root = resolve_path(directory)
     if not root.is_dir():
         return set()
@@ -292,6 +305,7 @@ def wait_for_log_line(
     timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
     poll_s = _require_nonnegative_finite("poll_s", poll_s)
     compiled = re.compile(pattern)
+    _logger.info("Waiting for a log line matching %s in %s", pattern, path)
     resolved = resolve_path(path)
     deadline = time.monotonic() + timeout_s
     while True:
@@ -336,6 +350,7 @@ def wait_for_new_file(
     """
     timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
     poll_s = _require_nonnegative_finite("poll_s", poll_s)
+    _logger.info("Waiting for a new file matching %s in %s", pattern, directory)
     root = resolve_path(directory)
     seen = set() if before is None else set(before)
     deadline = time.monotonic() + timeout_s
@@ -375,6 +390,7 @@ def verify_new_file(
     """
     _ = key
     timeout_s = _require_nonnegative_finite("timeout_s", timeout_s)
+    _logger.info("Checking for a new file matching %s in %s", pattern, directory)
     found = wait_for_new_file(
         directory,
         before=before,
@@ -421,6 +437,11 @@ def verify_no_new_file(
     """
     _ = key
     settle_s = _require_nonnegative_finite("settle_s", settle_s)
+    _logger.info(
+        "Checking that no new file matching %s appears in %s",
+        pattern,
+        directory,
+    )
     found = wait_for_new_file(
         directory,
         before=before,
