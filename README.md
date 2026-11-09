@@ -95,3 +95,5 @@ mypy
 ```
 
 Historical feature notes: [documentation history](https://tps01.github.io/colosseum-shared/guides/documentation-history.html).
+
+See [starter fuzz testing](tests/fuzz/README.md) for seed replay and optional Atheris runs.
