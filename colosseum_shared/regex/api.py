@@ -46,7 +46,11 @@ def verify_match(
     matched = re.search(pattern, actual) is not None
     passed = (not matched) if invert else matched
     _logger.debug(
-        "verify_match key=%s pattern=%r invert=%s matched=%s", key, pattern, invert, matched,
+        "verify_match key=%s pattern=%r invert=%s matched=%s",
+        key,
+        pattern,
+        invert,
+        matched,
     )
     if passed:
         return VerificationResult(status="PASS", message="", optional=optional, actual=actual)

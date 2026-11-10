@@ -52,7 +52,8 @@ def parse_timestamp(timestamp: str) -> datetime | None:
 
 
 def extract_field(
-    value: object, field: str | None,
+    value: object,
+    field: str | None,
 ) -> tuple[object | None, VerificationResult | None]:
     if field is None:
         return value, None

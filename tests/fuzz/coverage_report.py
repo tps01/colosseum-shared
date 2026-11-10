@@ -1,4 +1,5 @@
 """Manually replay fuzz seeds with scoped line/branch coverage; no Atheris needed."""
+
 from __future__ import annotations
 
 import argparse
@@ -7,7 +8,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 TARGET = "text"
-MODULES = ['colosseum_shared/parsing/text.py']
+MODULES = ["colosseum_shared/parsing/text.py"]
 
 
 def main() -> int:

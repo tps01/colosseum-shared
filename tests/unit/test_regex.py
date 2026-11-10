@@ -20,19 +20,28 @@ def _record_text(*, key: str, value: str) -> str:
 
 
 def test_verify_match_finds_measurement_by_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     _record_text(key="marker", value="second")
     result = col.shared.regex.verify_match(key="marker", pattern=r"^second$")
     assert result.status == "PASS"
-    assert col.shared.regex.verify_match(
-        key="marker", pattern=r"second", invert=True,
-    ).status == "FAIL"
-    assert col.shared.regex.verify_match(
-        key="marker", pattern=r"absent", invert=True,
-    ).status == "PASS"
+    assert (
+        col.shared.regex.verify_match(
+            key="marker",
+            pattern=r"second",
+            invert=True,
+        ).status
+        == "FAIL"
+    )
+    assert (
+        col.shared.regex.verify_match(
+            key="marker",
+            pattern=r"absent",
+            invert=True,
+        ).status
+        == "PASS"
+    )

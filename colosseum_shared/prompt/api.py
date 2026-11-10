@@ -105,11 +105,19 @@ def prompt(
 @measurement
 @_mark_command("prompt.prompt_measurement")
 def _prompt_measurement_record(
-    *, message: str, key: str, timeout_s: float | None = None,
+    *,
+    message: str,
+    key: str,
+    timeout_s: float | None = None,
 ) -> str:
     _ = key
-    line = read_line(message=message) if timeout_s is None else read_line(
-        message=message, timeout_s=timeout_s,
+    line = (
+        read_line(message=message)
+        if timeout_s is None
+        else read_line(
+            message=message,
+            timeout_s=timeout_s,
+        )
     )
     if line is None:
         raise PromptTimeoutError(f"no input within {timeout_s} s")
@@ -117,7 +125,10 @@ def _prompt_measurement_record(
 
 
 def prompt_measurement(
-    *, message: str, key: str, timeout_s: float | None = None,
+    *,
+    message: str,
+    key: str,
+    timeout_s: float | None = None,
 ) -> str | None:
     """Prompt for a line of operator input and store it as a measurement.
 

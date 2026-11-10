@@ -15,16 +15,15 @@ if TYPE_CHECKING:
 
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     ensure_runtime_ready(get_context())
 
 
 def test_meta_command_pass_and_fail(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     passed = col.shared.meta.command_pass(key="ok", message="scaffold")
@@ -35,7 +34,8 @@ def test_meta_command_pass_and_fail(
 
 
 def test_meta_measure_pass_and_fail(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     assert col.shared.meta.measure_pass(key="ok", value=3.3) == 3.3
@@ -51,10 +51,16 @@ def test_meta_measure_pass_and_fail(
 
 
 def test_meta_verify_pass_and_fail(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     assert col.shared.meta.verify_pass(key="ok", message="scaffold").status == "PASS"
-    assert col.shared.meta.verify_fail(
-        key="bad", message="debug", optional=True,
-    ).status == "FAIL"
+    assert (
+        col.shared.meta.verify_fail(
+            key="bad",
+            message="debug",
+            optional=True,
+        ).status
+        == "FAIL"
+    )

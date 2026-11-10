@@ -38,17 +38,13 @@ def check_input(data: bytes) -> None:
     else:
         actual = parse_float_list(text, sep=separator)
         assert len(actual) == len(expected_values)
-        assert all(
-            a == b or (math.isnan(a) and math.isnan(b)) for a, b in zip(actual, expected_values)
-        )
+        assert all(a == b or (math.isnan(a) and math.isnan(b)) for a, b in zip(actual, expected_values))
 
     # Construct valid numeric tokens, with prose that cannot contain a number.
     flags = data[0] if data else 0
     magnitude = int.from_bytes(data[1:5], "little")
     exponent = int.from_bytes(data[5:7], "little") % 801 - 400
-    mantissa = (str(magnitude), f"{magnitude}.", f".{magnitude}", f"{magnitude}.{magnitude}")[
-        flags % 4
-    ]
+    mantissa = (str(magnitude), f"{magnitude}.", f".{magnitude}", f"{magnitude}.{magnitude}")[flags % 4]
     token = ("-" if flags & 4 else "+") + mantissa
     if flags & 8:
         token += ("E" if flags & 16 else "e") + str(exponent)
