@@ -23,6 +23,66 @@ if TYPE_CHECKING:
 _logger = get_logger("colosseum.shared")
 
 
+def _resolve_verify_path(
+    key: str,
+    path: str | None,
+    *,
+    optional: bool,
+) -> Path | VerificationResult:
+    """Resolve ``path`` or the latest measurement for ``key`` to a filesystem path."""
+    file_path = path
+    if file_path is None:
+        row = latest_measurement_by_key(key)
+        if row is None or row.value is None:
+            _logger.debug("verify path key=%s missing measurement for path", key)
+            return missing_measurement_result(key=key, optional=optional)
+        file_path = str(row.value)
+    if not file_path:
+        return VerificationResult(
+            status="ERROR",
+            message="no path provided and measurement value is empty",
+            optional=optional,
+        )
+    return resolve_path(file_path)
+
+
+def _match_count_result(
+    *,
+    hits: int,
+    count: int,
+    pattern: str,
+    invert: bool,
+    optional: bool,
+) -> VerificationResult:
+    if invert:
+        if hits < count:
+            return VerificationResult(
+                status="PASS",
+                message=f"{hits} match(es) < {count}",
+                optional=optional,
+                actual=hits,
+            )
+        return VerificationResult(
+            status="FAIL",
+            message=f"expected fewer than {count} match(es) of {pattern!r}, found {hits}",
+            optional=optional,
+            actual=hits,
+        )
+    if hits >= count:
+        return VerificationResult(
+            status="PASS",
+            message=f"{hits} match(es) >= {count}",
+            optional=optional,
+            actual=hits,
+        )
+    return VerificationResult(
+        status="FAIL",
+        message=f"expected at least {count} match(es) of {pattern!r}, found {hits}",
+        optional=optional,
+        actual=hits,
+    )
+
+
 @verification
 @with_verify_command("verify_file_exists")
 def verify_file_exists(
@@ -49,20 +109,9 @@ def verify_file_exists(
         _logger.info("Checking that the file from measurement %s exists", key)
     else:
         _logger.info("Checking that file %s exists", path)
-    file_path = path
-    if file_path is None:
-        row = latest_measurement_by_key(key)
-        if row is None or row.value is None:
-            _logger.debug("verify_file_exists key=%s missing measurement for path", key)
-            return missing_measurement_result(key=key, optional=optional)
-        file_path = str(row.value)
-    if not file_path:
-        return VerificationResult(
-            status="ERROR",
-            message="no path provided and measurement value is empty",
-            optional=optional,
-        )
-    resolved = resolve_path(file_path)
+    resolved = _resolve_verify_path(key, path, optional=optional)
+    if isinstance(resolved, VerificationResult):
+        return resolved
     is_regular = resolved.is_file()
     _logger.debug("verify_file_exists key=%s path=%s is_file=%s", key, resolved, is_regular)
     if is_regular:
@@ -109,19 +158,9 @@ def verify_file_absent(
         _logger.info("Checking that the file from measurement %s is absent", key)
     else:
         _logger.info("Checking that file %s is absent", path)
-    file_path = path
-    if file_path is None:
-        row = latest_measurement_by_key(key)
-        if row is None or row.value is None:
-            return missing_measurement_result(key=key, optional=optional)
-        file_path = str(row.value)
-    if not file_path:
-        return VerificationResult(
-            status="ERROR",
-            message="no path provided and measurement value is empty",
-            optional=optional,
-        )
-    resolved = resolve_path(file_path)
+    resolved = _resolve_verify_path(key, path, optional=optional)
+    if isinstance(resolved, VerificationResult):
+        return resolved
     if resolved.is_file():
         return VerificationResult(
             status="FAIL",
@@ -171,20 +210,9 @@ def verify_file_contents(
         _logger.info("Checking the file from measurement %s for pattern %s", key, pattern)
     else:
         _logger.info("Checking file %s for pattern %s", path, pattern)
-    file_path = path
-    if file_path is None:
-        row = latest_measurement_by_key(key)
-        if row is None or row.value is None:
-            _logger.debug("verify_file_contents key=%s missing measurement for path", key)
-            return missing_measurement_result(key=key, optional=optional)
-        file_path = str(row.value)
-    if not file_path:
-        return VerificationResult(
-            status="ERROR",
-            message="no path provided and measurement value is empty",
-            optional=optional,
-        )
-    resolved = resolve_path(file_path)
+    resolved = _resolve_verify_path(key, path, optional=optional)
+    if isinstance(resolved, VerificationResult):
+        return resolved
     if not resolved.is_file():
         return VerificationResult(
             status="FAIL",
@@ -219,32 +247,12 @@ def verify_file_contents(
         invert,
         hits,
     )
-    if invert:
-        if hits < count:
-            return VerificationResult(
-                status="PASS",
-                message=f"{hits} match(es) < {count}",
-                optional=optional,
-                actual=hits,
-            )
-        return VerificationResult(
-            status="FAIL",
-            message=f"expected fewer than {count} match(es) of {pattern!r}, found {hits}",
-            optional=optional,
-            actual=hits,
-        )
-    if hits >= count:
-        return VerificationResult(
-            status="PASS",
-            message=f"{hits} match(es) >= {count}",
-            optional=optional,
-            actual=hits,
-        )
-    return VerificationResult(
-        status="FAIL",
-        message=f"expected at least {count} match(es) of {pattern!r}, found {hits}",
+    return _match_count_result(
+        hits=hits,
+        count=count,
+        pattern=pattern,
+        invert=invert,
         optional=optional,
-        actual=hits,
     )
 
 

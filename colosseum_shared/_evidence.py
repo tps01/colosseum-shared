@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from math import isfinite
 from pathlib import Path
@@ -151,6 +151,165 @@ def within_inclusive_bounds(
     return passed, _finite_number(actual)
 
 
+def _result(
+    *,
+    status: str,
+    message: str = "",
+    optional: bool,
+    actual: object | None = None,
+) -> VerificationResult:
+    if actual is None:
+        return VerificationResult(status=status, message=message, optional=optional)
+    return VerificationResult(status=status, message=message, optional=optional, actual=actual)
+
+
+def _compare_bool(
+    *,
+    actual: object,
+    expected_val: object,
+    tolerance: float,
+    optional: bool,
+) -> VerificationResult:
+    _ = tolerance
+    if not isinstance(actual, bool):
+        return _result(
+            status="ERROR",
+            message=f"expected Boolean evidence, got {actual!r}",
+            optional=optional,
+            actual=actual,
+        )
+    passed = actual is expected_val
+    return _result(
+        status="PASS" if passed else "FAIL",
+        message="" if passed else f"expected {expected_val!r}, got {actual!r}",
+        optional=optional,
+        actual=actual,
+    )
+
+
+def _compare_exact_int(
+    *,
+    actual: object,
+    expected_val: object,
+    tolerance: float,
+    optional: bool,
+) -> VerificationResult | None:
+    actual_int = _exact_integer(actual)
+    expected_int = _exact_integer(expected_val)
+    if actual_int is None or expected_int is None:
+        return None
+    if tolerance == 0:
+        matched = actual_int == expected_int
+    else:
+        matched = abs(actual_int - expected_int) <= tolerance
+    if matched:
+        return _result(status="PASS", optional=optional, actual=actual)
+    return _result(
+        status="FAIL",
+        message=f"expected {expected_int} +/- {tolerance}, got {actual_int}",
+        optional=optional,
+        actual=actual,
+    )
+
+
+def _compare_float_tol(
+    *,
+    actual: object,
+    expected_val: object,
+    tolerance: float,
+    optional: bool,
+) -> VerificationResult:
+    try:
+        actual_num = _loose_float(actual)
+    except (TypeError, ValueError):
+        return _result(
+            status="ERROR",
+            message=f"cannot compare numeric expected {expected_val!r} to actual {actual!r}",
+            optional=optional,
+        )
+    if not isfinite(actual_num):
+        return _result(
+            status="ERROR",
+            message=f"numeric evidence must be finite, got {actual!r}",
+            optional=optional,
+            actual=actual,
+        )
+    expected_num = float(expected_val)  # type: ignore[arg-type]
+    if abs(actual_num - expected_num) <= tolerance:
+        return _result(status="PASS", optional=optional, actual=actual)
+    return _result(
+        status="FAIL",
+        message=f"expected {expected_num} +/- {tolerance}, got {actual_num}",
+        optional=optional,
+        actual=actual,
+    )
+
+
+def _compare_numeric(
+    *,
+    actual: object,
+    expected_val: object,
+    tolerance: float,
+    optional: bool,
+) -> VerificationResult:
+    tolerance_error = _tolerance_error(tolerance)
+    if tolerance_error is not None:
+        return _result(
+            status="ERROR",
+            message=tolerance_error,
+            optional=optional,
+            actual=actual,
+        )
+    if not isfinite(expected_val):  # type: ignore[arg-type]
+        return _result(
+            status="ERROR",
+            message=f"numeric expected value must be finite, got {expected_val!r}",
+            optional=optional,
+            actual=actual,
+        )
+    exact = _compare_exact_int(
+        actual=actual,
+        expected_val=expected_val,
+        tolerance=tolerance,
+        optional=optional,
+    )
+    if exact is not None:
+        return exact
+    return _compare_float_tol(
+        actual=actual,
+        expected_val=expected_val,
+        tolerance=tolerance,
+        optional=optional,
+    )
+
+
+def _compare_string(
+    *,
+    actual: object,
+    expected_val: object,
+    tolerance: float,
+    optional: bool,
+) -> VerificationResult:
+    _ = tolerance
+    if str(actual) == str(expected_val):
+        return _result(status="PASS", optional=optional, actual=actual)
+    return _result(
+        status="FAIL",
+        message=f"expected {expected_val!r}, got {actual!r}",
+        optional=optional,
+        actual=actual,
+    )
+
+
+_COMPARE_KIND_HANDLERS: tuple[
+    tuple[Callable[[object], bool], Callable[..., VerificationResult]],
+    ...,
+] = (
+    (lambda expected: isinstance(expected, bool), _compare_bool),
+    (lambda expected: isinstance(expected, (int, float)), _compare_numeric),
+)
+
+
 def compare_expected(
     *,
     actual: object,
@@ -167,85 +326,19 @@ def compare_expected(
     Any other expectation uses string equality. Non-finite numbers and a
     negative or non-finite tolerance are ERROR.
     """
-    if isinstance(expected_val, bool):
-        if not isinstance(actual, bool):
-            return VerificationResult(
-                status="ERROR",
-                message=f"expected Boolean evidence, got {actual!r}",
-                optional=optional,
+    for matches, handler in _COMPARE_KIND_HANDLERS:
+        if matches(expected_val):
+            return handler(
                 actual=actual,
-            )
-        passed = actual is expected_val
-        return VerificationResult(
-            status="PASS" if passed else "FAIL",
-            message="" if passed else f"expected {expected_val!r}, got {actual!r}",
-            optional=optional,
-            actual=actual,
-        )
-    if isinstance(expected_val, (int, float)):
-        tolerance_error = _tolerance_error(tolerance)
-        if tolerance_error is not None:
-            return VerificationResult(
-                status="ERROR",
-                message=tolerance_error,
-                optional=optional,
-                actual=actual,
-            )
-        if not isfinite(expected_val):
-            return VerificationResult(
-                status="ERROR",
-                message=f"numeric expected value must be finite, got {expected_val!r}",
-                optional=optional,
-                actual=actual,
-            )
-        actual_int = _exact_integer(actual)
-        expected_int = _exact_integer(expected_val)
-        if actual_int is not None and expected_int is not None:
-            if tolerance == 0:
-                matched = actual_int == expected_int
-            else:
-                matched = abs(actual_int - expected_int) <= tolerance
-            if matched:
-                return VerificationResult(
-                    status="PASS", message="", optional=optional, actual=actual,
-                )
-            return VerificationResult(
-                status="FAIL",
-                message=f"expected {expected_int} +/- {tolerance}, got {actual_int}",
-                optional=optional,
-                actual=actual,
-            )
-        try:
-            actual_num = _loose_float(actual)
-        except (TypeError, ValueError):
-            return VerificationResult(
-                status="ERROR",
-                message=f"cannot compare numeric expected {expected_val!r} to actual {actual!r}",
+                expected_val=expected_val,
+                tolerance=tolerance,
                 optional=optional,
             )
-        if not isfinite(actual_num):
-            return VerificationResult(
-                status="ERROR",
-                message=f"numeric evidence must be finite, got {actual!r}",
-                optional=optional,
-                actual=actual,
-            )
-        expected_num = float(expected_val)
-        if abs(actual_num - expected_num) <= tolerance:
-            return VerificationResult(status="PASS", message="", optional=optional, actual=actual)
-        return VerificationResult(
-            status="FAIL",
-            message=f"expected {expected_num} +/- {tolerance}, got {actual_num}",
-            optional=optional,
-            actual=actual,
-        )
-    if str(actual) == str(expected_val):
-        return VerificationResult(status="PASS", message="", optional=optional, actual=actual)
-    return VerificationResult(
-        status="FAIL",
-        message=f"expected {expected_val!r}, got {actual!r}",
-        optional=optional,
+    return _compare_string(
         actual=actual,
+        expected_val=expected_val,
+        tolerance=tolerance,
+        optional=optional,
     )
 
 
