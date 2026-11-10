@@ -179,7 +179,7 @@ def run_process(
     _validate_run_process(argv=argv, timeout_s=timeout_s)
     _logger.info("Running %s for measurement %s", argv[0], key)
     process, threads, halt, found_terminator, stdout_parts, stderr_parts = _spawn_process_readers(
-        argv=argv, terminator=terminator
+        argv=argv, terminator=terminator,
     )
     _write_stdin(process, stdin_line)
 

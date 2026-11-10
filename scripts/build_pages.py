@@ -245,7 +245,7 @@ def _write_index(
         TITLE,
         "=" * len(TITLE),
         "",
-        ("Record values, verify evidence, check files and logs, and " "collect operator input with ``col.shared.*``."),
+        ("Record values, verify evidence, check files and logs, and collect operator input with ``col.shared.*``."),
         "",
         f"`Colosseum core documentation hub <{HUB_URL}>`__",
         "",
@@ -258,7 +258,7 @@ def _write_index(
                 "/development",
                 "/driver-documentation-requests",
                 "/documentation-history",
-            )
+            ),
         )
     ]
     learning = [name for name in guide_names if name not in development]
