@@ -28,6 +28,74 @@ _logger = get_logger("colosseum.shared")
 _UNSET = object()
 
 
+def _require_bounds_mode(
+    *,
+    expected_val: object,
+    tolerance: float,
+    tolerance_pct: float | None,
+    minimum: float | None,
+    maximum: float | None,
+) -> None:
+    if expected_val is not _UNSET or tolerance != 0.0 or tolerance_pct is not None:
+        raise ValueError("Use expected_val/tolerance or minimum/maximum, not both")
+    for bound in (minimum, maximum):
+        if bound is not None and (isinstance(bound, bool) or not isfinite(bound)):
+            raise ValueError("Bounds must be finite numbers")
+    if minimum is not None and maximum is not None and minimum > maximum:
+        raise ValueError("minimum must not exceed maximum")
+
+
+def _verify_field_bounds(
+    *,
+    actual: object,
+    minimum: float | None,
+    maximum: float | None,
+    optional: bool,
+) -> VerificationResult:
+    passed, shown = within_inclusive_bounds(
+        actual,
+        minimum=minimum,
+        maximum=maximum,
+    )
+    return VerificationResult(
+        status="PASS" if passed else "FAIL",
+        message=f"expected minimum={minimum}, maximum={maximum}; got {shown}",
+        optional=optional,
+        actual=actual,
+    )
+
+
+def _resolve_absolute_tolerance(
+    *,
+    expected_val: object,
+    tolerance: float,
+    tolerance_pct: float | None,
+) -> float:
+    if tolerance_pct is None:
+        return tolerance
+    if tolerance != 0.0:
+        raise ValueError("Use tolerance or tolerance_pct, not both")
+    if (
+        isinstance(tolerance_pct, bool)
+        or not isinstance(tolerance_pct, (int, float))
+        or not isfinite(tolerance_pct)
+        or tolerance_pct < 0
+    ):
+        raise ValueError(
+            f"tolerance_pct must be a finite nonnegative number, got {tolerance_pct!r}",
+        )
+    if isinstance(expected_val, bool) or not isinstance(expected_val, (int, float)) or not isfinite(expected_val):
+        raise ValueError("tolerance_pct requires a finite numeric expected_val")
+    return abs(float(expected_val)) * float(tolerance_pct) / 100.0
+
+
+def _field_mode(*, minimum: float | None, maximum: float | None) -> str:
+    """Select bounds vs expected comparison from the limit kwargs present."""
+    if minimum is not None or maximum is not None:
+        return "bounds"
+    return "expected"
+
+
 @verification(dry_run="call")
 @with_verify_command("verify_field")
 def verify_field(
@@ -75,6 +143,10 @@ def verify_field(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    if field is None:
+        _logger.info("Checking measurement %s", key)
+    else:
+        _logger.info("Checking field %s of measurement %s", field, key)
     row = latest_measurement_by_key(key)
     if row is None:
         _logger.debug("verify_field key=%s missing measurement", key)
@@ -91,50 +163,31 @@ def verify_field(
         tolerance,
         actual,
     )
-    if minimum is not None or maximum is not None:
-        if expected_val is not _UNSET or tolerance != 0.0 or tolerance_pct is not None:
-            raise ValueError("Use expected_val/tolerance or minimum/maximum, not both")
-        for bound in (minimum, maximum):
-            if bound is not None and (isinstance(bound, bool) or not isfinite(bound)):
-                raise ValueError("Bounds must be finite numbers")
-        if minimum is not None and maximum is not None and minimum > maximum:
-            raise ValueError("minimum must not exceed maximum")
-        passed, shown = within_inclusive_bounds(
-            actual,
+    mode = _field_mode(minimum=minimum, maximum=maximum)
+    if mode == "bounds":
+        _require_bounds_mode(
+            expected_val=expected_val,
+            tolerance=tolerance,
+            tolerance_pct=tolerance_pct,
             minimum=minimum,
             maximum=maximum,
         )
-        return VerificationResult(
-            status="PASS" if passed else "FAIL",
-            message=f"expected minimum={minimum}, maximum={maximum}; got {shown}",
-            optional=optional,
+        return _verify_field_bounds(
             actual=actual,
+            minimum=minimum,
+            maximum=maximum,
+            optional=optional,
         )
     if expected_val is _UNSET:
         raise ValueError("Supply expected_val or at least one numeric bound")
-    if tolerance_pct is not None:
-        if tolerance != 0.0:
-            raise ValueError("Use tolerance or tolerance_pct, not both")
-        if (
-            isinstance(tolerance_pct, bool)
-            or not isinstance(tolerance_pct, (int, float))
-            or not isfinite(tolerance_pct)
-            or tolerance_pct < 0
-        ):
-            raise ValueError(
-                f"tolerance_pct must be a finite nonnegative number, got {tolerance_pct!r}",
-            )
-        if (
-            isinstance(expected_val, bool)
-            or not isinstance(expected_val, (int, float))
-            or not isfinite(expected_val)
-        ):
-            raise ValueError("tolerance_pct requires a finite numeric expected_val")
-        tolerance = abs(float(expected_val)) * float(tolerance_pct) / 100.0
     return compare_expected(
         actual=actual,
         expected_val=expected_val,
-        tolerance=tolerance,
+        tolerance=_resolve_absolute_tolerance(
+            expected_val=expected_val,
+            tolerance=tolerance,
+            tolerance_pct=tolerance_pct,
+        ),
         optional=optional,
     )
 
@@ -152,6 +205,7 @@ def verify_measurement_exists(*, key: str, optional: bool = False) -> Verificati
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking that measurement %s exists", key)
     exists = measurement_exists(key)
     _logger.debug("verify_measurement_exists key=%s exists=%s", key, exists)
     if exists:
@@ -179,6 +233,7 @@ def verify_env(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking environment measurement %s", key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)
@@ -216,6 +271,7 @@ def verify_equal(
     :returns: VerificationResult with PASS, FAIL, or ERROR status.
     :rtype: VerificationResult
     """
+    _logger.info("Checking measurement %s matches measurement %s", key, other_key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)
@@ -256,6 +312,7 @@ def verify_in(
             message="choices must be a non-empty sequence of allowed values",
             optional=optional,
         )
+    _logger.info("Checking measurement %s is an allowed value", key)
     row = latest_measurement_by_key(key)
     if row is None or row.value is None:
         return missing_measurement_result(key=key, optional=optional)

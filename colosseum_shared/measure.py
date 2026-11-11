@@ -27,7 +27,7 @@ def measure_value(*, key: str, value: object) -> object:
     :returns: The same ``value``.
     :rtype: object
     """
-    _ = key
+    _logger.info("Recording measurement %s", key)
     _logger.debug("measure_value key=%s type=%s", key, type(value).__name__)
     return value
 
@@ -46,7 +46,7 @@ def measure_env(*, key: str, name: str) -> str:
 
     :raises KeyError: When ``name`` is not set in the environment.
     """
-    _ = key
+    _logger.info("Reading environment variable %s into measurement %s", name, key)
     if name not in os.environ:
         raise KeyError(f"environment variable {name!r} is not set")
     value = os.environ[name]
@@ -68,7 +68,7 @@ def measure_mark(*, key: str) -> float:
     :returns: Perf-counter mark value.
     :rtype: float
     """
-    _ = key
+    _logger.info("Recording an elapsed-time mark as measurement %s", key)
     mark = time.perf_counter()
     _logger.debug("measure_mark key=%s mark=%s", key, mark)
     return mark
@@ -89,7 +89,7 @@ def measure_wall_time(*, key: str) -> str:
     :returns: Timezone-aware UTC timestamp.
     :rtype: str
     """
-    _ = key
+    _logger.info("Recording wall time as measurement %s", key)
     stamp = datetime.now(timezone.utc).isoformat()
     _logger.debug("measure_wall_time key=%s stamp=%s", key, stamp)
     return stamp
@@ -109,7 +109,7 @@ def measure_file_text(*, key: str, path: str) -> str:
 
     :raises UnicodeDecodeError: When the file is not valid UTF-8.
     """
-    _ = key
+    _logger.info("Reading file %s into measurement %s", path, key)
     text = resolve_path(path).read_text(encoding="utf-8")
     _logger.debug("measure_file_text key=%s path=%s bytes=%s", key, path, len(text))
     return text
@@ -127,7 +127,7 @@ def measure_file_sha256(*, key: str, path: str) -> str:
     :returns: Lowercase hex digest.
     :rtype: str
     """
-    _ = key
+    _logger.info("Hashing file %s into measurement %s", path, key)
     digest = hashlib.sha256(resolve_path(path).read_bytes()).hexdigest()
     _logger.debug("measure_file_sha256 key=%s path=%s", key, path)
     return digest

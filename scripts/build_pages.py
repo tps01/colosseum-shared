@@ -23,35 +23,35 @@ TITLE = "Colosseum Shared"
 SLUG = "shared"
 # (rst_stem, import_module, displayed col.* path)
 API_MODULES: tuple[tuple[str, str, str], ...] = (
-    ('wait', 'colosseum_shared.wait', 'col.shared.wait'),
-    ('verify', 'colosseum_shared.verify.api', 'col.shared.verify'),
-    ('regex', 'colosseum_shared.regex.api', 'col.shared.regex'),
-    ('prompt', 'colosseum_shared.prompt.api', 'col.shared.prompt'),
-    ('parsing', 'colosseum_shared.parsing.text', 'col.shared.parsing'),
-    ('meta', 'colosseum_shared.meta.api', 'col.shared.meta'),
+    ("wait", "colosseum_shared.wait", "col.shared.wait"),
+    ("verify", "colosseum_shared.verify.api", "col.shared.verify"),
+    ("regex", "colosseum_shared.regex.api", "col.shared.regex"),
+    ("prompt", "colosseum_shared.prompt.api", "col.shared.prompt"),
+    ("parsing", "colosseum_shared.parsing.text", "col.shared.parsing"),
+    ("meta", "colosseum_shared.meta.api", "col.shared.meta"),
 )
 # Optional single-function pages: (rst_stem, "module:qualname", displayed name)
 API_FUNCTIONS: tuple[tuple[str, str, str], ...] = (
-    ('measure_value', 'colosseum_shared.measure.measure_value', 'col.shared.measure_value'),
-    ('measure_env', 'colosseum_shared.measure.measure_env', 'col.shared.measure_env'),
-    ('measure_mark', 'colosseum_shared.measure.measure_mark', 'col.shared.measure_mark'),
+    ("measure_value", "colosseum_shared.measure.measure_value", "col.shared.measure_value"),
+    ("measure_env", "colosseum_shared.measure.measure_env", "col.shared.measure_env"),
+    ("measure_mark", "colosseum_shared.measure.measure_mark", "col.shared.measure_mark"),
     (
-        'measure_wall_time',
-        'colosseum_shared.measure.measure_wall_time',
-        'col.shared.measure_wall_time',
+        "measure_wall_time",
+        "colosseum_shared.measure.measure_wall_time",
+        "col.shared.measure_wall_time",
     ),
     (
-        'measure_file_text',
-        'colosseum_shared.measure.measure_file_text',
-        'col.shared.measure_file_text',
+        "measure_file_text",
+        "colosseum_shared.measure.measure_file_text",
+        "col.shared.measure_file_text",
     ),
     (
-        'measure_file_sha256',
-        'colosseum_shared.measure.measure_file_sha256',
-        'col.shared.measure_file_sha256',
+        "measure_file_sha256",
+        "colosseum_shared.measure.measure_file_sha256",
+        "col.shared.measure_file_sha256",
     ),
-    ('run_process', 'colosseum_shared.process.run_process', 'col.shared.run_process'),
-    ('comment', 'colosseum_shared.prompt.api.comment', 'col.shared.comment'),
+    ("run_process", "colosseum_shared.process.run_process", "col.shared.run_process"),
+    ("comment", "colosseum_shared.prompt.api.comment", "col.shared.comment"),
 )
 GUIDES: tuple[str, ...] = (
     "docs/documentation-history.md",
@@ -60,9 +60,7 @@ GUIDES: tuple[str, ...] = (
     "docs/sphinx/source/guides/getting_started.rst",
     "docs/sphinx/source/guides/evidence_workflows.rst",
 )
-CONFIG_REFERENCE: tuple[str, ...] = (
-    "docs/sphinx/source/config_reference.rst",
-)
+CONFIG_REFERENCE: tuple[str, ...] = ("docs/sphinx/source/config_reference.rst",)
 CONFIG_PACKAGE = "colosseum_shared"
 # --- end per-plugin constants ---
 
@@ -171,6 +169,10 @@ def _document_controls(app, what, name, obj, options, lines):
             "Verification label in summaries and reports; omitted or blank "
             "uses the evidence key."
         ),
+        "requirements": (
+            "Requirement identifiers attached to this verification. "
+            "A comma-separated string or a list; omitted attaches none."
+        ),
     }}
     for parameter, description in controls.items():
         if (
@@ -215,7 +217,11 @@ See :doc:`/guides/api_conventions` for evidence, optional failures, and defaults
 
 
 def _write_function_page(
-    stem: str, target: str, col_path: str, *, no_index: bool = False,
+    stem: str,
+    target: str,
+    col_path: str,
+    *,
+    no_index: bool = False,
 ) -> str:
     api_dir = SITE_SOURCE / "api"
     api_dir.mkdir(parents=True, exist_ok=True)
@@ -236,22 +242,24 @@ def _write_index(
     config_names: list[str],
 ) -> None:
     lines = [
-        TITLE, "=" * len(TITLE), "",
-        (
-            "Record values, verify evidence, check files and logs, and "
-            "collect operator input with ``col.shared.*``."
-        ),
+        TITLE,
+        "=" * len(TITLE),
         "",
-        f"`Colosseum core documentation hub <{HUB_URL}>`__", "",
+        ("Record values, verify evidence, check files and logs, and collect operator input with ``col.shared.*``."),
+        "",
+        f"`Colosseum core documentation hub <{HUB_URL}>`__",
+        "",
     ]
     development = [
         name
         for name in guide_names
-        if name.endswith((
-            "/development",
-            "/driver-documentation-requests",
-            "/documentation-history",
-        ))
+        if name.endswith(
+            (
+                "/development",
+                "/driver-documentation-requests",
+                "/documentation-history",
+            ),
+        )
     ]
     learning = [name for name in guide_names if name not in development]
     learning.sort(
@@ -269,8 +277,7 @@ def _write_index(
     )
     for caption, names in sections:
         if names:
-            lines.extend([".. toctree::", "   :maxdepth: 1", "   :titlesonly:",
-                          f"   :caption: {caption}", ""])
+            lines.extend([".. toctree::", "   :maxdepth: 1", "   :titlesonly:", f"   :caption: {caption}", ""])
             lines.extend(f"   {name}" for name in names)
             lines.append("")
     (SITE_SOURCE / "index.rst").write_text("\n".join(lines), encoding="utf-8")
@@ -348,10 +355,7 @@ def stage() -> None:
         ast.literal_eval(node.value)
         for node in tree.body
         if isinstance(node, ast.Assign)
-        and any(
-            isinstance(target, ast.Name) and target.id == "__all__"
-            for target in node.targets
-        )
+        and any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets)
     )
     documented = {path.rsplit(".", 1)[-1] for _, _, path in (*API_MODULES, *API_FUNCTIONS)}
     missing = set(exported) - documented
@@ -386,7 +390,9 @@ def stage() -> None:
         text = src.read_text(encoding="utf-8")
         if src.suffix == ".md":
             text = subprocess.check_output(
-                ["pandoc", "-f", "markdown", "-t", "rst"], input=text, text=True,
+                ["pandoc", "-f", "markdown", "-t", "rst"],
+                input=text,
+                text=True,
                 encoding="utf-8",
             )
         text = _sanitize_guide(text)

@@ -45,7 +45,7 @@ def wait(*, duration: float | int | str, progress_bar: bool = False) -> None:
     :param progress_bar: When ``True``, print a progress bar to stdout while waiting.
     """
     seconds = parse_duration(duration)
-    _logger.info("wait duration=%rs (%.3fs) progress_bar=%s", duration, seconds, progress_bar)
+    _logger.info("Waiting %s (%.3f s)", duration, seconds)
     if progress_bar:
         _sleep_with_progress(seconds)
     else:

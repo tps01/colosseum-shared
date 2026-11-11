@@ -38,6 +38,10 @@ def command_pass(
     :returns: CommandResult with PASS status.
     :rtype: CommandResult
     """
+    if key:
+        _logger.info("Recording a passing command %s", key)
+    else:
+        _logger.info("Recording a passing command")
     _logger.debug("meta.command_pass key=%s", key)
     return CommandResult(status="PASS", message=message, optional=optional)
 
@@ -61,6 +65,10 @@ def command_fail(
     :returns: CommandResult with FAIL status.
     :rtype: CommandResult
     """
+    if key:
+        _logger.info("Recording a failing command %s", key)
+    else:
+        _logger.info("Recording a failing command")
     _logger.debug("meta.command_fail key=%s", key)
     return CommandResult(status="FAIL", message=message, optional=optional)
 
@@ -77,6 +85,7 @@ def measure_pass(*, key: str, value: object = True) -> object:
     :returns: The same ``value``.
     :rtype: object
     """
+    _logger.info("Recording a passing measurement %s", key)
     _logger.debug("meta.measure_pass key=%s type=%s", key, type(value).__name__)
     return value
 
@@ -106,6 +115,7 @@ def measure_fail(
     :raises RuntimeError: Always, unless ``optional=True`` (then still raised
         internally and swallowed by the measurement decorator).
     """
+    _logger.info("Recording a failing measurement %s", key)
     _logger.debug("meta.measure_fail key=%s optional=%s", key, optional)
     raise RuntimeError(message)
 
@@ -124,6 +134,7 @@ def verify_pass(*, key: str, message: str = "", optional: bool = False) -> Verif
     :returns: VerificationResult with PASS status.
     :rtype: VerificationResult
     """
+    _logger.info("Recording a passing verification %s", key)
     _logger.debug("meta.verify_pass key=%s", key)
     return VerificationResult(status="PASS", message=message, optional=optional)
 
@@ -147,5 +158,6 @@ def verify_fail(
     :returns: VerificationResult with FAIL status.
     :rtype: VerificationResult
     """
+    _logger.info("Recording a failing verification %s", key)
     _logger.debug("meta.verify_fail key=%s", key)
     return VerificationResult(status="FAIL", message=message, optional=optional)

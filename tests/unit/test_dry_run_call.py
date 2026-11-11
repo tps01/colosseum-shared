@@ -17,9 +17,7 @@ if TYPE_CHECKING:
 
 
 def _load_shared_dry_run(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     ctx = get_context()

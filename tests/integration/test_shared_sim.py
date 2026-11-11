@@ -13,11 +13,10 @@ _VERSION_PATTERN = r"v\d+\.\d+\.\d+"
 
 
 def test_measure_value_wait_and_regex(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     ctx = context_module.init_context(test_case_name="shared_sim")
     ctx.output_dir = tmp_path

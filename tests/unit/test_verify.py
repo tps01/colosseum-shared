@@ -44,9 +44,7 @@ def _pass_verify(*, key: str, optional: bool = False) -> VerificationResult:
 
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     ensure_runtime_ready(get_context())
@@ -147,7 +145,8 @@ def test_verify_file_exists_with_path(tmp_path: Path, monkeypatch: pytest.Monkey
 
 
 def test_verify_file_exists_from_measurement_value(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -166,7 +165,8 @@ def test_verify_file_exists_missing_file(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_verify_file_exists_rejects_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -178,7 +178,8 @@ def test_verify_file_exists_rejects_directory(
 
 
 def test_verify_file_contents_count_and_invert(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -186,25 +187,58 @@ def test_verify_file_contents_count_and_invert(
     log = ctx.output_dir / "uut.log"
     log.write_text("INFO ok\nERROR a\nERROR b\nINFO done\n", encoding="utf-8")
 
-    assert col.shared.verify.verify_file_contents(
-        key="errors", path="uut.log", pattern=r"ERROR", count=2,
-    ).status == "PASS"
-    assert col.shared.verify.verify_file_contents(
-        key="errors_low", path="uut.log", pattern=r"ERROR", count=3,
-    ).status == "FAIL"
-    assert col.shared.verify.verify_file_contents(
-        key="no_fatal", path="uut.log", pattern=r"FATAL", invert=True,
-    ).status == "PASS"
-    assert col.shared.verify.verify_file_contents(
-        key="few_errors", path="uut.log", pattern=r"ERROR", count=3, invert=True,
-    ).status == "PASS"
-    assert col.shared.verify.verify_file_contents(
-        key="too_many", path="uut.log", pattern=r"ERROR", count=2, invert=True,
-    ).status == "FAIL"
+    assert (
+        col.shared.verify.verify_file_contents(
+            key="errors",
+            path="uut.log",
+            pattern=r"ERROR",
+            count=2,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_file_contents(
+            key="errors_low",
+            path="uut.log",
+            pattern=r"ERROR",
+            count=3,
+        ).status
+        == "FAIL"
+    )
+    assert (
+        col.shared.verify.verify_file_contents(
+            key="no_fatal",
+            path="uut.log",
+            pattern=r"FATAL",
+            invert=True,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_file_contents(
+            key="few_errors",
+            path="uut.log",
+            pattern=r"ERROR",
+            count=3,
+            invert=True,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_file_contents(
+            key="too_many",
+            path="uut.log",
+            pattern=r"ERROR",
+            count=2,
+            invert=True,
+        ).status
+        == "FAIL"
+    )
 
 
 def test_verify_file_contents_from_measurement_path(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -212,7 +246,9 @@ def test_verify_file_contents_from_measurement_path(
     (ctx.output_dir / "note.txt").write_text("alpha beta alpha\n", encoding="utf-8")
     _record_text(key="note", value="note.txt")
     result = col.shared.verify.verify_file_contents(
-        key="note", pattern=r"alpha", count=2,
+        key="note",
+        pattern=r"alpha",
+        count=2,
     )
     assert result.status == "PASS"
 
@@ -248,7 +284,8 @@ def test_verify_new_file_and_no_new_file(tmp_path: Path, monkeypatch: pytest.Mon
 
 
 def test_recursive_snapshot_distinguishes_duplicate_basenames(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -314,7 +351,9 @@ def _reject_long_sleep(slept: list[float]) -> object:
 
 @pytest.mark.parametrize("settle_s", [float("nan"), float("inf"), -1.0])
 def test_verify_no_new_file_rejects_bad_settle(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, settle_s: float,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    settle_s: float,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -339,7 +378,8 @@ def test_verify_no_new_file_rejects_bad_settle(
 
 
 def test_wait_for_new_file_rejects_nonfinite_timing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -471,7 +511,8 @@ def test_verify_m_of_n_rejects_invalid_window(
 
 
 def test_verify_match_uses_latest_measurement_by_key(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _insert_measurement(key="marker", timestamp="2026-01-01T00:00:00+00:00", value="first")
@@ -568,20 +609,20 @@ _NEXT_LARGE_INT = 9007199254740993
 
 
 def test_verify_field_stores_prefixed_command_id(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     _record_text(key="version", value="v1.2.3")
     col.shared.verify.verify_field(key="version", expected_val="v1.2.3")
-    stored = [
-        row for row in get_context().db.fetch_all_verifications() if row.key == "version"
-    ]
+    stored = [row for row in get_context().db.fetch_all_verifications() if row.key == "version"]
     assert len(stored) == 1
     assert stored[0].command == "verify.verify_field"
 
 
 def test_verify_field_large_integers_compare_exactly(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     col.shared.measure_value(key="below", value=_LARGE_INT)
@@ -589,21 +630,46 @@ def test_verify_field_large_integers_compare_exactly(
     col.shared.measure_value(key="above_text", value=str(_NEXT_LARGE_INT))
     col.shared.measure_value(key="mixed", value="10.5")
 
-    assert col.shared.verify.verify_field(
-        key="below", expected_val=_NEXT_LARGE_INT, tolerance=0,
-    ).status == "FAIL"
-    assert col.shared.verify.verify_field(
-        key="above", expected_val=_LARGE_INT, tolerance=0,
-    ).status == "FAIL"
-    assert col.shared.verify.verify_field(
-        key="above", expected_val=_NEXT_LARGE_INT, tolerance=0,
-    ).status == "PASS"
-    assert col.shared.verify.verify_field(
-        key="above_text", expected_val=_LARGE_INT, tolerance=0,
-    ).status == "FAIL"
-    assert col.shared.verify.verify_field(
-        key="above_text", expected_val=_NEXT_LARGE_INT, tolerance=0,
-    ).status == "PASS"
+    assert (
+        col.shared.verify.verify_field(
+            key="below",
+            expected_val=_NEXT_LARGE_INT,
+            tolerance=0,
+        ).status
+        == "FAIL"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="above",
+            expected_val=_LARGE_INT,
+            tolerance=0,
+        ).status
+        == "FAIL"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="above",
+            expected_val=_NEXT_LARGE_INT,
+            tolerance=0,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="above_text",
+            expected_val=_LARGE_INT,
+            tolerance=0,
+        ).status
+        == "FAIL"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="above_text",
+            expected_val=_NEXT_LARGE_INT,
+            tolerance=0,
+        ).status
+        == "PASS"
+    )
     assert col.shared.verify.verify_field(key="above", maximum=_LARGE_INT).status == "FAIL"
     assert col.shared.verify.verify_field(key="below", minimum=_NEXT_LARGE_INT).status == "FAIL"
     assert col.shared.verify.verify_field(key="below", maximum=_LARGE_INT).status == "PASS"
@@ -611,12 +677,22 @@ def test_verify_field_large_integers_compare_exactly(
     assert col.shared.verify.verify_field(key="above", maximum=_NEXT_LARGE_INT).status == "PASS"
     assert col.shared.verify.verify_field(key="below", minimum=_LARGE_INT).status == "PASS"
     assert col.shared.verify.verify_field(key="above_text", maximum=_LARGE_INT).status == "FAIL"
-    assert col.shared.verify.verify_field(
-        key="mixed", expected_val=10, tolerance=0.5,
-    ).status == "PASS"
-    assert col.shared.verify.verify_field(
-        key="mixed", expected_val=10, tolerance=0,
-    ).status == "FAIL"
+    assert (
+        col.shared.verify.verify_field(
+            key="mixed",
+            expected_val=10,
+            tolerance=0.5,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="mixed",
+            expected_val=10,
+            tolerance=0,
+        ).status
+        == "FAIL"
+    )
 
 
 @pytest.mark.parametrize(
@@ -641,7 +717,9 @@ def test_verify_field_rejects_invalid_numeric_comparison(
     _load_shared_config(tmp_path, monkeypatch)
     col.shared.measure_value(key="n", value=actual)
     result = col.shared.verify.verify_field(
-        key="n", expected_val=expected, tolerance=tolerance,
+        key="n",
+        expected_val=expected,
+        tolerance=tolerance,
     )
     assert result.status == "ERROR"
 
@@ -649,14 +727,27 @@ def test_verify_field_rejects_invalid_numeric_comparison(
 def test_verify_field_percent_tolerance(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     col.shared.measure_value(key="n", value=110)
-    assert col.shared.verify.verify_field(
-        key="n", expected_val=100, tolerance_pct=10,
-    ).status == "PASS"
-    assert col.shared.verify.verify_field(
-        key="n", expected_val=100, tolerance_pct=5,
-    ).status == "FAIL"
+    assert (
+        col.shared.verify.verify_field(
+            key="n",
+            expected_val=100,
+            tolerance_pct=10,
+        ).status
+        == "PASS"
+    )
+    assert (
+        col.shared.verify.verify_field(
+            key="n",
+            expected_val=100,
+            tolerance_pct=5,
+        ).status
+        == "FAIL"
+    )
     both = col.shared.verify.verify_field(
-        key="n", expected_val=100, tolerance=1, tolerance_pct=10,
+        key="n",
+        expected_val=100,
+        tolerance=1,
+        tolerance_pct=10,
     )
     assert both.status == "ERROR"
 
@@ -674,7 +765,8 @@ def test_verify_equal_and_verify_in(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 
 
 def test_verify_file_absent_and_file_measurements(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     ctx = get_context()
@@ -695,9 +787,19 @@ def test_wait_for_log_line(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     assert ctx.output_dir is not None
     log = ctx.output_dir / "boot.log"
     log.write_text("booting\nready\n", encoding="utf-8")
-    assert col.shared.verify.wait_for_log_line(
-        "boot.log", pattern=r"ready", timeout_s=0,
-    ) == "ready"
-    assert col.shared.verify.wait_for_log_line(
-        "boot.log", pattern=r"fatal", timeout_s=0,
-    ) is None
+    assert (
+        col.shared.verify.wait_for_log_line(
+            "boot.log",
+            pattern=r"ready",
+            timeout_s=0,
+        )
+        == "ready"
+    )
+    assert (
+        col.shared.verify.wait_for_log_line(
+            "boot.log",
+            pattern=r"fatal",
+            timeout_s=0,
+        )
+        is None
+    )
