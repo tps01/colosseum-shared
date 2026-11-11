@@ -178,8 +178,8 @@ def run_process(
     """
     _validate_run_process(argv=argv, timeout_s=timeout_s)
     _logger.info("Running %s for measurement %s", argv[0], key)
-    process, threads, halt, found_terminator, stdout_parts, stderr_parts = (
-        _spawn_process_readers(argv=argv, terminator=terminator)
+    process, threads, halt, found_terminator, stdout_parts, stderr_parts = _spawn_process_readers(
+        argv=argv, terminator=terminator,
     )
     _write_stdin(process, stdin_line)
 
@@ -194,7 +194,10 @@ def run_process(
     stdout = _trim_stdout("".join(stdout_parts), terminator)
     exit_code = None if timed_out else process.returncode
     _logger.debug(
-        "run_process key=%s timed_out=%s exit_code=%s", key, timed_out, exit_code,
+        "run_process key=%s timed_out=%s exit_code=%s",
+        key,
+        timed_out,
+        exit_code,
     )
     return {
         "stdout": stdout,

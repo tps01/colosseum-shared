@@ -10,15 +10,14 @@ from colosseum.config import load_config
 
 
 def _load(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
 
 
 def test_wait_parses_units_and_sleeps(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load(tmp_path, monkeypatch)
     slept: list[float] = []
@@ -29,7 +28,9 @@ def test_wait_parses_units_and_sleeps(
 
 
 def test_wait_progress_bar_ticks(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _load(tmp_path, monkeypatch)
     ticks = {"n": 0}
@@ -49,7 +50,9 @@ def test_wait_progress_bar_ticks(
 
 
 def test_wait_progress_bar_zero_duration_returns_immediately(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _load(tmp_path, monkeypatch)
     slept: list[float] = []
@@ -60,7 +63,9 @@ def test_wait_progress_bar_zero_duration_returns_immediately(
 
 
 def test_wait_default_uses_plain_sleep_without_bar(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _load(tmp_path, monkeypatch)
     slept: list[float] = []
@@ -71,7 +76,8 @@ def test_wait_default_uses_plain_sleep_without_bar(
 
 
 def test_wait_rejects_nonfinite(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load(tmp_path, monkeypatch)
     slept: list[float] = []

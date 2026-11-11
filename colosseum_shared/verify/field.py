@@ -84,11 +84,7 @@ def _resolve_absolute_tolerance(
         raise ValueError(
             f"tolerance_pct must be a finite nonnegative number, got {tolerance_pct!r}",
         )
-    if (
-        isinstance(expected_val, bool)
-        or not isinstance(expected_val, (int, float))
-        or not isfinite(expected_val)
-    ):
+    if isinstance(expected_val, bool) or not isinstance(expected_val, (int, float)) or not isfinite(expected_val):
         raise ValueError("tolerance_pct requires a finite numeric expected_val")
     return abs(float(expected_val)) * float(tolerance_pct) / 100.0
 

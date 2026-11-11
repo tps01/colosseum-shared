@@ -226,15 +226,23 @@ def verify_error_count(
             )
         try:
             passed, actual = within_inclusive_bounds(
-                count, minimum=minimum, maximum=maximum,
+                count,
+                minimum=minimum,
+                maximum=maximum,
             )
         except ValueError as exc:
             return VerificationResult(
-                status="ERROR", message=str(exc), optional=optional, actual=count,
+                status="ERROR",
+                message=str(exc),
+                optional=optional,
+                actual=count,
             )
         if passed:
             return VerificationResult(
-                status="PASS", message="", optional=optional, actual=actual,
+                status="PASS",
+                message="",
+                optional=optional,
+                actual=actual,
             )
         return VerificationResult(
             status="FAIL",

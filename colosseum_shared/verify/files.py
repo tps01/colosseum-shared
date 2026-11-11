@@ -285,9 +285,7 @@ def snapshot_files(directory: str, *, pattern: str = "*") -> set[str]:
     root = resolve_path(directory)
     if not root.is_dir():
         return set()
-    return {
-        _relative_file_id(root, path) for path in root.glob(pattern) if path.is_file()
-    }
+    return {_relative_file_id(root, path) for path in root.glob(pattern) if path.is_file()}
 
 
 def wait_for_log_line(

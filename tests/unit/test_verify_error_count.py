@@ -15,16 +15,15 @@ if TYPE_CHECKING:
 
 
 def _load_shared_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    config_path = (
-        Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
-    )
+    config_path = Path(__file__).resolve().parents[2] / "examples" / "configs" / "config.shared.sim.toml"
     monkeypatch.chdir(tmp_path)
     load_config(config_path)
     ensure_runtime_ready(get_context())
 
 
 def test_verify_error_count_expected_and_bounds(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     col.shared.meta.measure_fail(key="e1", optional=True)
@@ -40,7 +39,9 @@ def test_verify_error_count_expected_and_bounds(
     assert too_high.status == "FAIL"
 
     within = col.shared.verify.verify_error_count(
-        key="err-bounds", minimum=1, maximum=2,
+        key="err-bounds",
+        minimum=1,
+        maximum=2,
     )
     assert within.status == "PASS"
 
@@ -49,7 +50,8 @@ def test_verify_error_count_expected_and_bounds(
 
 
 def test_verify_error_count_include_optional_verification(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     # Force an ERROR verification via invalid verify_m_of_n args (optional so run continues).
@@ -60,18 +62,23 @@ def test_verify_error_count_include_optional_verification(
     assert excluded.status == "PASS"
 
     included = col.shared.verify.verify_error_count(
-        key="with-opt", expected=1, include_optional=True,
+        key="with-opt",
+        expected=1,
+        include_optional=True,
     )
     assert included.status == "PASS"
 
 
 def test_verify_error_count_rejects_bad_args(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _load_shared_config(tmp_path, monkeypatch)
     missing = col.shared.verify.verify_error_count(key="missing")
     assert missing.status == "ERROR"
     both = col.shared.verify.verify_error_count(
-        key="both", expected=0, minimum=0,
+        key="both",
+        expected=0,
+        minimum=0,
     )
     assert both.status == "ERROR"

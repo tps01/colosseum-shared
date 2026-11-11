@@ -52,7 +52,8 @@ def parse_timestamp(timestamp: str) -> datetime | None:
 
 
 def extract_field(
-    value: object, field: str | None,
+    value: object,
+    field: str | None,
 ) -> tuple[object | None, VerificationResult | None]:
     if field is None:
         return value, None
@@ -198,10 +199,7 @@ def _compare_exact_int(
     expected_int = _exact_integer(expected_val)
     if actual_int is None or expected_int is None:
         return None
-    if tolerance == 0:
-        matched = actual_int == expected_int
-    else:
-        matched = abs(actual_int - expected_int) <= tolerance
+    matched = actual_int == expected_int if tolerance == 0 else abs(actual_int - expected_int) <= tolerance
     if matched:
         return _result(status="PASS", optional=optional, actual=actual)
     return _result(

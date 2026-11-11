@@ -263,7 +263,9 @@ def verify_wall_time_delta(
     end, end_error = _wall_instant(key=key, literal=None, optional=optional)
     if end_error is not None or end is None:
         return end_error or VerificationResult(
-            status="ERROR", message="missing wall time", optional=optional,
+            status="ERROR",
+            message="missing wall time",
+            optional=optional,
         )
     start, start_error = _wall_instant(
         key=other_key or "",
@@ -272,7 +274,9 @@ def verify_wall_time_delta(
     )
     if start_error is not None or start is None:
         return start_error or VerificationResult(
-            status="ERROR", message="missing wall time", optional=optional,
+            status="ERROR",
+            message="missing wall time",
+            optional=optional,
         )
     delta_s = (end - start).total_seconds()
     _logger.debug(
