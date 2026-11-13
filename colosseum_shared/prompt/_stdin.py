@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from math import isfinite
@@ -25,6 +26,8 @@ def read_line(*, message: str, timeout_s: float | None = None) -> str | None:
     """
     print(message, flush=True)
     limit = _timeout_seconds(timeout_s)
+    if not sys.stdin.isatty():
+        return _pipe_line(limit)
     if limit is None:
         return input()
     if sys.platform == "win32":
@@ -40,9 +43,57 @@ def wait_any_key(*, message: str, timeout_s: float | None = None) -> bool:
     print(message, flush=True)
     print("Press any key to continue...", flush=True)
     limit = _timeout_seconds(timeout_s)
+    if not sys.stdin.isatty():
+        return _pipe_line(limit) is not None
     if sys.platform == "win32":
         return _windows_key(limit)
     return _posix_key(limit)
+
+
+def _pipe_line(timeout_s: float | None) -> str | None:
+    """Read a complete redirected input line without blocking past the deadline."""
+    import codecs
+
+    deadline = None if timeout_s is None else time.monotonic() + timeout_s
+    decoder = codecs.getincrementaldecoder(sys.stdin.encoding or "utf-8")("replace")
+    chars: list[str] = []
+    fd = sys.stdin.fileno()
+    while True:
+        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+        if sys.platform == "win32":
+            import ctypes
+            import msvcrt
+            from ctypes import wintypes
+
+            available = wintypes.DWORD()
+            handle = msvcrt.get_osfhandle(fd)
+            get_type = ctypes.windll.kernel32.GetFileType
+            get_type.argtypes = [wintypes.HANDLE]
+            get_type.restype = wintypes.DWORD
+            if get_type(handle) != 1:  # Regular files are immediately readable.
+                peek = ctypes.windll.kernel32.PeekNamedPipe
+                peek.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD,
+                                 wintypes.LPVOID, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+                peek.restype = wintypes.BOOL
+                if not peek(handle, None, 0, None, ctypes.byref(available), None):
+                    return None
+                if not available.value:
+                    if remaining == 0:
+                        return None
+                    time.sleep(min(0.02, remaining) if remaining is not None else 0.02)
+                    continue
+        else:
+            import select
+
+            if not select.select([fd], [], [], remaining)[0]:
+                return None
+        data = os.read(fd, 1)
+        if not data:
+            return None
+        char = decoder.decode(data)
+        if char == "\n":
+            return "".join(chars).rstrip("\r")
+        chars.append(char)
 
 
 def _posix_line(timeout_s: float) -> str | None:
