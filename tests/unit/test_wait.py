@@ -29,7 +29,9 @@ def test_wait_parses_units_and_sleeps(
 
 
 @pytest.mark.parametrize("progress_bar", [False, True])
-def test_wait_logs_message_before_waiting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, progress_bar: bool) -> None:
+def test_wait_logs_message_before_waiting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *, progress_bar: bool,
+) -> None:
     _load(tmp_path, monkeypatch)
     wait_module = import_module("colosseum_shared.wait")
     events: list[str] = []
