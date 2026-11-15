@@ -36,16 +36,19 @@ def _sleep_with_progress(seconds: float) -> None:
 
 
 @command
-def wait(*, duration: float | int | str, progress_bar: bool = False) -> None:
+def wait(*, duration: float | int | str, progress_bar: bool = False, message: str = "") -> None:
     """Block for ``duration``, optionally showing a CLI progress bar.
 
     :param duration: Wait length. Bare numbers are seconds; strings may use
         ``us``/``µs``, ``ms``, ``s``, ``m``, ``h``, ``d``, ``w`` (e.g. ``500ms``,
         ``1h30m``). Must be finite and nonnegative; zero returns immediately.
     :param progress_bar: When ``True``, print a progress bar to stdout while waiting.
+    :param message: Optional operator message logged at INFO before waiting.
     """
     seconds = parse_duration(duration)
     _logger.info("Waiting %s (%.3f s)", duration, seconds)
+    if message:
+        _logger.info("%s", message)
     if progress_bar:
         _sleep_with_progress(seconds)
     else:

@@ -20,7 +20,7 @@ Save **shared_smoke.py** beside the config file::
    import colosseum as col
 
    def main() -> None:
-       col.shared.wait(duration=0.1)
+       col.shared.wait(duration=0.1, message="Waiting for DUT startup")
        col.shared.measure_value(key="uut_version", value="v1.2.3")
        col.shared.regex.verify_match(key="uut_version", pattern=r"v\d+\.\d+\.\d+")
        col.shared.verify.verify_field(key="uut_version", expected_val="v1.2.3")

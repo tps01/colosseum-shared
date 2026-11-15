@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib import import_module
 from pathlib import Path
 
 import colosseum as col
@@ -25,6 +26,19 @@ def test_wait_parses_units_and_sleeps(
     col.shared.wait(duration="250ms")
     assert len(slept) == 1
     assert slept[0] == pytest.approx(0.25)
+
+
+@pytest.mark.parametrize("progress_bar", [False, True])
+def test_wait_logs_message_before_waiting(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, progress_bar: bool) -> None:
+    _load(tmp_path, monkeypatch)
+    wait_module = import_module("colosseum_shared.wait")
+    events: list[str] = []
+    monkeypatch.setattr(wait_module._logger, "info", lambda msg, *args: events.append(msg % args))
+    monkeypatch.setattr(wait_module.time, "sleep", lambda _seconds: events.append("sleep"))
+    monkeypatch.setattr(wait_module, "_sleep_with_progress", lambda _seconds: events.append("progress"))
+    col.shared.wait(duration="250ms", progress_bar=progress_bar, message="Waiting for DUT startup")
+    assert "Waiting for DUT startup" in events
+    assert events.index("Waiting for DUT startup") < events.index("progress" if progress_bar else "sleep")
 
 
 def test_wait_progress_bar_ticks(
