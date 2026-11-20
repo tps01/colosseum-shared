@@ -6,6 +6,10 @@ import os
 import sys
 import time
 from math import isfinite
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _timeout_seconds(timeout_s: float | None) -> float | None:
@@ -22,7 +26,7 @@ def _timeout_seconds(timeout_s: float | None) -> float | None:
 def read_line(*, message: str, timeout_s: float | None = None) -> str | None:
     """Print ``message`` and return one line from stdin.
 
-    :returns: The line without a trailing newline, or ``None`` when ``timeout_s`` elapses.
+    :returns: The line without a trailing newline, or ``None`` at EOF or timeout.
     """
     print(message, flush=True)
     limit = _timeout_seconds(timeout_s)
@@ -51,49 +55,73 @@ def wait_any_key(*, message: str, timeout_s: float | None = None) -> bool:
 
 
 def _pipe_line(timeout_s: float | None) -> str | None:
-    """Read a complete redirected input line without blocking past the deadline."""
+    """Read a redirected line, including an unterminated line at EOF."""
     import codecs
 
     deadline = None if timeout_s is None else time.monotonic() + timeout_s
     decoder = codecs.getincrementaldecoder(sys.stdin.encoding or "utf-8")("replace")
     chars: list[str] = []
     fd = sys.stdin.fileno()
+    if sys.platform == "win32":
+        windows_ready = _windows_pipe_waiter(fd)
+    else:
+        import select
+
     while True:
-        remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
         if sys.platform == "win32":
-            import ctypes
-            import msvcrt
-            from ctypes import wintypes
-
-            available = wintypes.DWORD()
-            handle = msvcrt.get_osfhandle(fd)
-            get_type = ctypes.windll.kernel32.GetFileType
-            get_type.argtypes = [wintypes.HANDLE]
-            get_type.restype = wintypes.DWORD
-            if get_type(handle) != 1:  # Regular files are immediately readable.
-                peek = ctypes.windll.kernel32.PeekNamedPipe
-                peek.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD,
-                                 wintypes.LPVOID, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
-                peek.restype = wintypes.BOOL
-                if not peek(handle, None, 0, None, ctypes.byref(available), None):
-                    return None
-                if not available.value:
-                    if remaining == 0:
-                        return None
-                    time.sleep(min(0.02, remaining) if remaining is not None else 0.02)
-                    continue
+            ready = windows_ready(deadline)
         else:
-            import select
-
-            if not select.select([fd], [], [], remaining)[0]:
-                return None
+            remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+            ready = bool(select.select([fd], [], [], remaining)[0])
+        if ready is None:
+            break
+        if not ready:
+            return None
         data = os.read(fd, 1)
         if not data:
-            return None
+            break
         char = decoder.decode(data)
         if char == "\n":
             return "".join(chars).rstrip("\r")
         chars.append(char)
+
+    line = "".join(chars) + decoder.decode(b"", final=True)
+    return line.rstrip("\r") if line else None
+
+
+def _windows_pipe_waiter(fd: int) -> Callable[[float | None], bool | None]:
+    """Return a readiness check with ``None`` for a closed pipe."""
+    if sys.platform != "win32":
+        raise RuntimeError("Windows pipe polling is only available on Windows")
+    import ctypes
+    import msvcrt
+    from ctypes import wintypes
+
+    handle = msvcrt.get_osfhandle(fd)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_type = kernel32.GetFileType
+    get_type.argtypes = [wintypes.HANDLE]
+    get_type.restype = wintypes.DWORD
+    if get_type(handle) == 1:  # Regular files are immediately readable.
+        return lambda _deadline: True
+
+    available = wintypes.DWORD()
+    peek = kernel32.PeekNamedPipe
+    peek.argtypes = [wintypes.HANDLE, wintypes.LPVOID, wintypes.DWORD,
+                     wintypes.LPVOID, ctypes.POINTER(wintypes.DWORD), wintypes.LPVOID]
+    peek.restype = wintypes.BOOL
+
+    def ready(deadline: float | None) -> bool | None:
+        while peek(handle, None, 0, None, ctypes.byref(available), None):
+            if available.value:
+                return True
+            remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+            if remaining == 0:
+                return False
+            time.sleep(min(0.02, remaining) if remaining is not None else 0.02)
+        return None if ctypes.get_last_error() == 109 else False  # ERROR_BROKEN_PIPE
+
+    return ready
 
 
 def _posix_line(timeout_s: float) -> str | None:

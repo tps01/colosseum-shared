@@ -13,6 +13,17 @@ def test_redirected_line_and_any_key():
     assert "True" in result.stdout
 
 
+def test_redirected_final_line_without_newline():
+    code = ("from colosseum_shared.prompt._stdin import read_line; "
+            "print(ascii(read_line(message='line', timeout_s=3))); "
+            "print(ascii(read_line(message='line', timeout_s=3)))")
+    result = subprocess.run([sys.executable, "-X", "utf8", "-c", code], input="caf\u00e9",
+                            encoding="utf-8", capture_output=True, timeout=10, check=True)
+    assert result.stdout.splitlines() == [
+        "line", ascii("caf\u00e9"), "line", "None",
+    ]
+
+
 def test_redirected_timeout():
     code = "from colosseum_shared.prompt._stdin import read_line; print(read_line(message='line', timeout_s=0.05))"
     proc = subprocess.Popen([sys.executable, "-c", code], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
